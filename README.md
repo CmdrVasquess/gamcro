@@ -1,4 +1,5 @@
 # Gamcro
+[![Go Report Card](https://goreportcard.com/badge/github.com/CmdrVasquess/gamcro)](https://goreportcard.com/report/github.com/CmdrVasquess/gamcro)
 
 Gamcro: Game Macros allows you to send input from another machine to the program on your computer that is currently active, aka which is in the foreground. This can be rather useful, e.g. when playing a computer game.
 
