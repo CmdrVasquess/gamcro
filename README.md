@@ -60,7 +60,7 @@ certificate file nor the selected key file. The defaults are `cert.pem` and `key
 
 ![Web UI](doc/gamcro-ui.png)
 
-It allows you to make your game machine _type_ something or to put something on the _clip_board.
+It allows you to make your game machine _type_ something or to _clip_ something to the clipboard.
 This will be much more useful when you use a browser on another computer. To do that you have to find the IP address of your gaming machine, let's say `<my-ip-address>`. With this point your browser to `https://<my-ip-address>:9420/`
 
 _to be continued…_
