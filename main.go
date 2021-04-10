@@ -16,7 +16,7 @@ import (
 	rogo "github.com/go-vgo/robotgo"
 )
 
-//go:generate versioner -bno BuildNo VERSION version.go
+//go:generate versioner -bno build_no VERSION version.go
 
 var (
 	serv            string
@@ -59,7 +59,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 
 func showBanner() {
 	os.Stdout.WriteString(banner)
-	fmt.Printf("v%d.%d.%d\n", Major, Minor, Patch)
+	fmt.Printf("v%d.%d.%d [%s #%d]\n", Major, Minor, Patch, Quality, BuildNo)
 }
 
 func main() {
@@ -77,7 +77,6 @@ func main() {
 	//	http.HandleFunc("/gamcro", handleMacro)
 	http.HandleFunc("/type-str", auth(handleTypeStr))
 	http.HandleFunc("/clip", auth(handleClipStr))
-	http.HandleFunc("/script/", auth(handleScript))
 
 	if err := ensureCreds(); err != nil {
 		log.Fatale(err)

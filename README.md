@@ -72,3 +72,16 @@ TODO
 ## API
 
 TODO
+
+## Develop
+### Prerequisites
+
+* [Go SDK](https://go.dev/) 1.16+
+
+TODO (TL;DR “need [cgo](https://blog.golang.org/cgo)”)
+
+### Building
+
+Gamcro can be build with standard `go build` command. This will produce a working executable
+for development purpose. To build a distribution run `go run mk/mk.go`. This will include 
+the `go generate` step and some extra flags.
