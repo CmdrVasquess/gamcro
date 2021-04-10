@@ -98,6 +98,12 @@ func ensureTLSCert(cert, key string) error {
 }
 
 func ensureCreds() (err error) {
+	if strings.IndexByte(authCreds, ':') >= 0 {
+		log.Warns("It is not secure to set passwords on the command line!")
+		me := filepath.Base(os.Args[0])
+		log.Infof("Better use '%s -auth <filename>' with restricted access to <filename>", me)
+		return nil
+	}
 	if authCreds == "" {
 		log.Infos("Need user and password for HTTP basic auth")
 		var usr string
@@ -125,12 +131,6 @@ func ensureCreds() (err error) {
 		}
 		fmt.Println()
 		authCreds = usr + ":" + string(pass1)
-		log.Infos(authCreds)
-	}
-	if strings.IndexByte(authCreds, ':') >= 0 {
-		log.Warns("It is not secure to set passwords on the command line!")
-		me := filepath.Base(os.Args[0])
-		log.Infof("Better use '%s -auth <filename>' with restricted access to <filename>", me)
 		return nil
 	}
 	log.Infoa("Read HTTP basic auth user:password from `file`", authCreds)
