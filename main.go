@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -19,7 +20,7 @@ import (
 //go:generate versioner -bno build_no VERSION version.go
 
 var (
-	serv            string
+	srvAddr         string
 	tlsCert, tlsKey = "cert.pem", "key.pem"
 	authCreds       string
 	inLimit         = 256
@@ -64,7 +65,7 @@ func showBanner() {
 
 func main() {
 	showBanner()
-	flag.StringVar(&serv, "addr", ":9420", "server address")
+	flag.StringVar(&srvAddr, "addr", ":9420", "server address")
 	flag.StringVar(&tlsCert, "cert", tlsCert, "TLS cert file to use for HTTPS")
 	flag.StringVar(&tlsKey, "key", tlsKey, "TLS key file to use for HTTPS")
 	flag.StringVar(&authCreds, "auth", "", "basic auth")
@@ -86,8 +87,9 @@ func main() {
 	}
 	log.Infoa("Load TLS `certificate`", tlsCert)
 	log.Infoa("Load TLS `key`", tlsKey)
-	log.Infof("Runninig gamcro HTTPS server on %s", serv)
-	log.Fatale(http.ListenAndServeTLS(serv, tlsCert, tlsKey, nil))
+	log.Infof("Runninig gamcro HTTPS server on %s", srvAddr)
+	connectHint()
+	log.Fatale(http.ListenAndServeTLS(srvAddr, tlsCert, tlsKey, nil))
 }
 
 func handleUI(wr http.ResponseWriter, rq *http.Request) {
@@ -126,17 +128,27 @@ func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
 	}
 }
 
-// func myip() {
-// 	addrs, _ := net.InterfaceAddrs()
-// 	for _, addr := range addrs {
-// 		ipn, ok := addr.(*net.IPNet)
-// 		if !ok || ipn.IP.IsLoopback() {
-// 			continue
-// 		}
-// 		fmt.Printf("%s: %s\n", ipn.Network(), ipn)
-// 	}
-// 	conn, _ := net.Dial("udp", "8.8.8.8:80")
-// 	defer conn.Close()
-// 	addr := conn.LocalAddr().(*net.UDPAddr)
-// 	fmt.Printf("%T: %s", addr, addr.IP.String())
-// }
+func connectHint() {
+	if srvAddr == "" {
+		return
+	}
+	if srvAddr[0] != ':' {
+		log.Infof("Use https://%s/ to connect your browser to the Web UI", srvAddr)
+		return
+	}
+	conn, _ := net.Dial("udp", "8.8.8.8:80")
+	defer conn.Close()
+	addr := conn.LocalAddr().(*net.UDPAddr)
+	log.Infof("Use https://%s%s/ to connect your browser to the Web UI",
+		addr.IP,
+		srvAddr,
+	)
+	// addrs, _ := net.InterfaceAddrs()
+	// for _, addr := range addrs {
+	// 	ipn, ok := addr.(*net.IPNet)
+	// 	if !ok || ipn.IP.IsLoopback() {
+	// 		continue
+	// 	}
+	// 	fmt.Printf("%s: %s\n", ipn.Network(), ipn)
+	// }
+}
