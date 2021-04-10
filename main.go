@@ -1,14 +1,16 @@
 package main
 
 import (
-	_ "embed"
+	"embed"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"time"
 
 	"git.fractalqb.de/fractalqb/c4hgol"
@@ -29,11 +31,13 @@ var (
 	log    = qbsllm.New(qbsllm.Lnormal, "gamcro", nil, nil)
 	logCfg = qbsllm.NewConfig(log)
 
-	//go:embed ui.html
-	ui []byte
-	//go:embed banner.txt
-	banner string
+	//go:embed assets
+	assets embed.FS
 )
+
+func asset(p string) string {
+	return path.Join("assets", p)
+}
 
 func auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(wr http.ResponseWriter, rq *http.Request) {
@@ -59,7 +63,12 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func showBanner() {
-	os.Stdout.WriteString(banner)
+	rd, err := assets.Open(asset("banner.txt"))
+	if err != nil {
+		log.Fatale(err)
+	}
+	defer rd.Close()
+	io.Copy(os.Stdout, rd)
 	fmt.Printf("v%d.%d.%d [%s #%d]\n", Major, Minor, Patch, Quality, BuildNo)
 }
 
@@ -75,7 +84,12 @@ func main() {
 	c4hgol.SetLevel(logCfg, fLog, nil)
 
 	http.HandleFunc("/", handleUI)
-	//	http.HandleFunc("/gamcro", handleMacro)
+	if staticDir, err := fs.Sub(assets, "assets"); err != nil {
+		log.Fatale(err)
+	} else {
+		staticHdlr := http.FileServer(http.FS(staticDir))
+		http.Handle("/s/", http.StripPrefix("/", staticHdlr))
+	}
 	http.HandleFunc("/type-str", auth(handleTypeStr))
 	http.HandleFunc("/clip", auth(handleClipStr))
 
@@ -93,7 +107,7 @@ func main() {
 }
 
 func handleUI(wr http.ResponseWriter, rq *http.Request) {
-	wr.Write(ui)
+	http.Redirect(wr, rq, "/s/ui.html", http.StatusSeeOther)
 }
 
 func rqBody(rq *http.Request) ([]byte, error) {

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gamcro</title>
-    </head><script src="https://unpkg.com/vue@next"></script>
+    <script src="/s/js/vue.js"></script>
     <style>
 body { background-color: #333; color: #bbb; }
 button { background-color: #999; color: black; padding: .5em 1em; }
@@ -24,13 +24,14 @@ textarea { background-color: black; color: #eee; }
 }
 .msg > textarea { grid-column: 1/5; }
     </style>
+  </head>
   <body>
     <h1>Gamcro – Game Macros</h1>
     <main>
       <div id="quick">
         <button @click="addMsg()">New Text</button>
-        <input v-model.lazy="qtype" placeholder="quick type"></inpjut>
-        <input v-model.lazy="qclip" placeholder="quick clip"></inpjut>
+        <input v-model.lazy="qtype" placeholder="quick type">
+        <input v-model.lazy="qclip" placeholder="quick clip">
       </div>
       <span id="stat">{{stat}}</span>
       <div v-for="(msg, idx) in msgs" :key="idx" class="msg">
