@@ -125,3 +125,18 @@ func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
 		log.Errora("Read body failed with `err`", err)
 	}
 }
+
+// func myip() {
+// 	addrs, _ := net.InterfaceAddrs()
+// 	for _, addr := range addrs {
+// 		ipn, ok := addr.(*net.IPNet)
+// 		if !ok || ipn.IP.IsLoopback() {
+// 			continue
+// 		}
+// 		fmt.Printf("%s: %s\n", ipn.Network(), ipn)
+// 	}
+// 	conn, _ := net.Dial("udp", "8.8.8.8:80")
+// 	defer conn.Close()
+// 	addr := conn.LocalAddr().(*net.UDPAddr)
+// 	fmt.Printf("%T: %s", addr, addr.IP.String())
+// }

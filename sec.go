@@ -123,6 +123,7 @@ func ensureCreds() (err error) {
 			fmt.Println()
 			log.Infos("Passwords missmatch")
 		}
+		fmt.Println()
 		authCreds = usr + ":" + string(pass1)
 		log.Infos(authCreds)
 	}
