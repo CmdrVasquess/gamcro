@@ -1,4 +1,5 @@
-/gamcro
-/gamcro.debug
 *.backup
-/gamcro.exe
+*.debug
+*.exe
+*.pem
+/gamcro

@@ -15,8 +15,7 @@ import (
 
 	"git.fractalqb.de/fractalqb/c4hgol"
 	"git.fractalqb.de/fractalqb/qbsllm"
-	"github.com/atotto/clipboard"
-	rogo "github.com/go-vgo/robotgo"
+	"github.com/gorilla/mux"
 )
 
 //go:generate versioner -bno build_no VERSION version.go
@@ -72,6 +71,12 @@ func showBanner() {
 	fmt.Printf("v%d.%d.%d [%s #%d]\n", Major, Minor, Patch, Quality, BuildNo)
 }
 
+type dh int
+
+func (_ dh) ServeHTTP(wr http.ResponseWriter, rq *http.Request) {
+	log.Infoa("rq `path`", rq.URL.Path)
+}
+
 func main() {
 	showBanner()
 	flag.StringVar(&srvAddr, "addr", ":9420", "server address")
@@ -83,15 +88,15 @@ func main() {
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, fLog, nil)
 
-	http.HandleFunc("/", handleUI)
+	webRoutes := mux.NewRouter()
+	webRoutes.HandleFunc("/", handleUI)
 	if staticDir, err := fs.Sub(assets, "assets"); err != nil {
 		log.Fatale(err)
 	} else {
 		staticHdlr := http.FileServer(http.FS(staticDir))
-		http.Handle("/s/", http.StripPrefix("/", staticHdlr))
+		webRoutes.PathPrefix("/s/").Handler(http.StripPrefix("/", staticHdlr))
 	}
-	http.HandleFunc("/type-str", auth(handleTypeStr))
-	http.HandleFunc("/clip", auth(handleClipStr))
+	apiRoutes(webRoutes)
 
 	if err := ensureCreds(); err != nil {
 		log.Fatale(err)
@@ -103,43 +108,18 @@ func main() {
 	log.Infoa("Load TLS `key`", tlsKey)
 	log.Infof("Runninig gamcro HTTPS server on %s", srvAddr)
 	connectHint()
-	log.Fatale(http.ListenAndServeTLS(srvAddr, tlsCert, tlsKey, nil))
+	log.Fatale(http.ListenAndServeTLS(srvAddr, tlsCert, tlsKey, webRoutes))
 }
 
 func handleUI(wr http.ResponseWriter, rq *http.Request) {
+	if rq.Method != http.MethodGet {
+		http.Error(wr, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if rq.URL.Path != "/" {
+		http.Error(wr, "not found", http.StatusNotFound)
+	}
 	http.Redirect(wr, rq, "/s/ui.html", http.StatusSeeOther)
-}
-
-func rqBody(rq *http.Request) ([]byte, error) {
-	var rd io.Reader = rq.Body
-	if inLimit > 0 {
-		rd = io.LimitReader(rd, int64(inLimit))
-	}
-	return io.ReadAll(rd)
-}
-
-func handleTypeStr(wr http.ResponseWriter, rq *http.Request) {
-	body, err := rqBody(rq)
-	if err == nil && len(body) > 0 {
-		s := string(body)
-		log.Debuga("`type-str`", s)
-		rogo.TypeStr(s)
-	} else if err != nil {
-		log.Errora("Read body failed with `err`", err)
-	}
-}
-
-func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
-	body, err := rqBody(rq)
-	if err == nil && len(body) > 0 {
-		s := string(body)
-		log.Debuga("`cpip`", s)
-		if err = clipboard.WriteAll(s); err != nil {
-			log.Errore(err)
-		}
-	} else if err != nil {
-		log.Errora("Read body failed with `err`", err)
-	}
 }
 
 func connectHint() {

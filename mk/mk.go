@@ -13,10 +13,10 @@ import (
 type target = string
 
 const (
-	TOOLS target = "tools"
-	GEN   target = "gen"
-	BUILD target = "build"
-	DIST  target = "dist"
+	tTools target = "tools"
+	tGen   target = "gen"
+	tBuild target = "build"
+	tDist  target = "dist"
 )
 
 var (
@@ -43,19 +43,19 @@ func webAssetsFilter(dir string, info os.FileInfo) bool {
 }
 
 func init() {
-	tasks.Def(TOOLS, func(dir *gomk.WDir) {
+	tasks.Def(tTools, func(dir *gomk.WDir) {
 		task.GetVersioner(dir.Build())
 	})
 
-	tasks.Def(GEN, func(dir *gomk.WDir) {
+	tasks.Def(tGen, func(dir *gomk.WDir) {
 		dir.Exec("go", "generate", "./...")
-	}, TOOLS)
+	}, tTools)
 
-	tasks.Def(BUILD, func(dir *gomk.WDir) {
+	tasks.Def(tBuild, func(dir *gomk.WDir) {
 		dir.Exec("go", buildCmd...)
 	})
 
-	tasks.Def(DIST, nil, GEN, BUILD)
+	tasks.Def(tDist, nil, tGen, tBuild)
 }
 
 func main() {
@@ -67,7 +67,7 @@ func main() {
 	build, _ := gomk.NewBuild("", os.Environ())
 	log.Printf("project root: %s\n", build.PrjRoot)
 	if len(flag.Args()) == 0 {
-		tasks.Run(DIST, build.WDir())
+		tasks.Run(tDist, build.WDir())
 	} else {
 		for _, task := range flag.Args() {
 			tasks.Run(task, build.WDir())

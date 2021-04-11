@@ -69,12 +69,16 @@ const gmcApp = {
     delMsg(i) {
       this.msgs.splice(i, 1);
     },
-    typeMsg(txt) { this.sendMsg("/type-str", txt); },
+    typeMsg(txt) { this.sendMsg("/keyboard/type", txt); },
     clipMsg(txt) { this.sendMsg("/clip", txt); },
     sendMsg(op, txt) {
       console.log("send", op, txt);
       this.stat = "";
-      let init = { method: "POST", body: txt };
+      let init = {
+        method: "POST",
+        headers: {'Content-Type': "text/plain"},
+        body: txt
+      };
       fetch(new Request(op, init))
       .then(resp => {
         if (!resp.ok) {

@@ -13,6 +13,7 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-vgo/robotgo v0.93.1
 	github.com/gofrs/uuid v4.0.0+incompatible
+	github.com/gorilla/mux v1.8.0
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/shirou/gopsutil v3.21.3+incompatible // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
