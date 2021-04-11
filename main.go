@@ -4,7 +4,6 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"math/rand"
 	"net"
@@ -30,8 +29,10 @@ var (
 	log    = qbsllm.New(qbsllm.Lnormal, "gamcro", nil, nil)
 	logCfg = qbsllm.NewConfig(log)
 
-	//go:embed assets
-	assets embed.FS
+	//go:embed banner.txt
+	banner []byte
+	//go:embed web-ui/dist
+	webfs embed.FS
 )
 
 func asset(p string) string {
@@ -62,19 +63,8 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func showBanner() {
-	rd, err := assets.Open(asset("banner.txt"))
-	if err != nil {
-		log.Fatale(err)
-	}
-	defer rd.Close()
-	io.Copy(os.Stdout, rd)
+	os.Stdout.Write(banner)
 	fmt.Printf("v%d.%d.%d [%s #%d]\n", Major, Minor, Patch, Quality, BuildNo)
-}
-
-type dh int
-
-func (_ dh) ServeHTTP(wr http.ResponseWriter, rq *http.Request) {
-	log.Infoa("rq `path`", rq.URL.Path)
 }
 
 func main() {
@@ -90,11 +80,11 @@ func main() {
 
 	webRoutes := mux.NewRouter()
 	webRoutes.HandleFunc("/", handleUI)
-	if staticDir, err := fs.Sub(assets, "assets"); err != nil {
+	if staticDir, err := fs.Sub(webfs, "web-ui/dist"); err != nil {
 		log.Fatale(err)
 	} else {
 		staticHdlr := http.FileServer(http.FS(staticDir))
-		webRoutes.PathPrefix("/s/").Handler(http.StripPrefix("/", staticHdlr))
+		webRoutes.PathPrefix("/s/").Handler(http.StripPrefix("/s/", staticHdlr))
 	}
 	apiRoutes(webRoutes)
 
@@ -119,7 +109,7 @@ func handleUI(wr http.ResponseWriter, rq *http.Request) {
 	if rq.URL.Path != "/" {
 		http.Error(wr, "not found", http.StatusNotFound)
 	}
-	http.Redirect(wr, rq, "/s/ui.html", http.StatusSeeOther)
+	http.Redirect(wr, rq, "/s/index.html", http.StatusSeeOther)
 }
 
 func connectHint() {
