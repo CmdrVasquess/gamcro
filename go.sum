@@ -10,8 +10,8 @@ git.fractalqb.de/fractalqb/qblog v0.10.1/go.mod h1:cQS2sL/5ZzPpCG/vjuKBfSk540bnj
 git.fractalqb.de/fractalqb/qbsllm v0.11.2 h1:kMEBmVNSQXDG7R6W4W40+pRxMTnyNb6LIU9S9A93M7M=
 git.fractalqb.de/fractalqb/qbsllm v0.11.2/go.mod h1:rk8IDY4+FCkPDO715VoCYnibrRdpYxIiDl0Rdz9enAc=
 git.fractalqb.de/fractalqb/sllm v0.12.0/go.mod h1:FlGIXCoFd6kE9FExAmiZ2CPWrUG8mRdm+fa44zOgPYI=
-git.fractalqb.de/fractalqb/sllm v1.0.0 h1:d/yfjQMzj4gHAUTO6FG4q2ufQLOWLu/jYyVThdWaAto=
-git.fractalqb.de/fractalqb/sllm v1.0.0/go.mod h1:FlGIXCoFd6kE9FExAmiZ2CPWrUG8mRdm+fa44zOgPYI=
+git.fractalqb.de/fractalqb/sllm v0.12.1 h1:x+831AC4z7H9YtIHnVOUBH1n99SR2MUNHZk9QYfrAy0=
+git.fractalqb.de/fractalqb/sllm v0.12.1/go.mod h1:FlGIXCoFd6kE9FExAmiZ2CPWrUG8mRdm+fa44zOgPYI=
 git.fractalqb.de/fractalqb/xsx v0.7.1 h1:u1QQYUDWBIV4Lz5dmi6CuuInG60oFaNaNs/DafdYWbU=
 git.fractalqb.de/fractalqb/xsx v0.7.1/go.mod h1:COyDfUOWSzAYlD4gtqtJoVxo6daPSuDzU4+3u2SuEIM=
 github.com/BurntSushi/freetype-go v0.0.0-20160129220410-b763ddbfe298/go.mod h1:D+QujdIlUNfa0igpNMk6UIvlb6C252URs4yupRUV4lQ=

@@ -4,9 +4,11 @@
             :value="modelValue"
             @input="$emit('update:modelValue', $event.target.value)"></textarea>
   <button :disabled="modelValue.length==0"
-          @click="typeMsg(modelValue)">Type</button>
+          @click="typeMsg(modelValue)"
+          title="Type text on the target computer">Type</button>
   <button :disabled="modelValue.length==0"
-          @click="clipMsg(modelValue)">Clip</button>
+          @click="clipMsg(modelValue)"
+          title="Send text to clipboard of the target computer">Clip</button>
   <button id="del" @click="delMsg(index)">Delete</button>
 </div>
 </template>

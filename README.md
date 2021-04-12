@@ -1,4 +1,4 @@
-# Gamcro
+# <img src="web-ui/public/logo.png" height="60">amcro
 [![Go Report Card](https://goreportcard.com/badge/github.com/CmdrVasquess/gamcro)](https://goreportcard.com/report/github.com/CmdrVasquess/gamcro)
 
 Gamcro: Game Macros allows you to send input from another machine to the program on your computer that is currently active, aka which is in the foreground. This can be rather useful, e.g. when playing a computer game.
@@ -47,12 +47,12 @@ Then Gamcro starts and shows you this message:
     | \ \   / / / ___| __ _ _ __ ___   ___ _ __ ___  
  _  | |\ \ / (_) |  _ / _` | '_ ` _ \ / __| '__/ _ \ 
 | |_| | \ V / _| |_| | (_| | | | | | | (__| | | (_) |
- \___/   \_/ (_)\____|\__,_|_| |_| |_|\___|_|  \___/  v0.2.0
-Apr 09 14:13:18.176 INFO  [gamcro] Read HTTP basic auth user:password from `file:auth.txt`
-Apr 09 14:13:18.177 INFO  [gamcro] Create self signed `certificate:cert.pem` with `key:key.pem` as `common name:JV:Gamcro`
-Apr 09 14:13:18.205 INFO  [gamcro] Load TLS `certificate:cert.pem`
-Apr 09 14:13:18.205 INFO  [gamcro] Load TLS `key:key.pem`
-Apr 09 14:13:18.205 INFO  [gamcro] Runninig gamcro HTTPS server on :9420
+ \___/   \_/ (_)\____|\__,_|_| |_| |_|\___|_|  \___/  v0.4.0 [alpha #33]
+Apr 12 17:11:35.670 INFO  [gamcro] Read HTTP basic auth user:password from `file:auth.txt`
+Apr 12 17:11:35.671 INFO  [gamcro] Load TLS `certificate:cert.pem`
+Apr 12 17:11:35.671 INFO  [gamcro] Load TLS `key:key.pem`
+Apr 12 17:11:35.671 INFO  [gamcro] Runninig gamcro HTTPS server on :9420
+Apr 12 17:11:35.671 INFO  [gamcro] Use https://10.0.0.2:9420/ to connect your browser to the Web UI
 ```
 
 Note that Gamcro creates a self-signed X.509 certificate if it does not find neither the selected

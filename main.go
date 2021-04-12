@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"runtime"
 	"time"
 
 	"git.fractalqb.de/fractalqb/c4hgol"
@@ -64,7 +65,11 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 
 func showBanner() {
 	os.Stdout.Write(banner)
-	fmt.Printf("v%d.%d.%d [%s #%d]\n", Major, Minor, Patch, Quality, BuildNo)
+	fmt.Printf("v%d.%d.%d [%s #%d; %s]\n",
+		Major, Minor, Patch,
+		Quality, BuildNo,
+		runtime.Version(),
+	)
 }
 
 func main() {

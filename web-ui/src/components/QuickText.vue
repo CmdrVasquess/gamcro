@@ -1,12 +1,12 @@
 <template>
 <div id="quick">
-  <label for="type">Quick type:
-    <input id="type" v-model.lazy="type" placeholder="Press enter to send">
-  </label>
+  <label for="type" class="before">Quick type</label>
+  <input id="type" v-model.lazy="type"
+         placeholder="Text to type on target">
   <span id="gap"></span>
-  <label for="clip">Quick clip:
-    <input id="clip" v-model.lazy="clip" placeholder="Press enter to send">
-  </label>
+  <label for="clip" class="before">Quick clip</label>
+  <input id="clip" v-model.lazy="clip"
+         placeholder="Text to send to target clipboard">
 </div>
 </template>
 

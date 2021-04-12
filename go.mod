@@ -6,7 +6,7 @@ require (
 	git.fractalqb.de/fractalqb/c4hgol v0.10.4
 	git.fractalqb.de/fractalqb/gomk v0.2.0
 	git.fractalqb.de/fractalqb/qbsllm v0.11.2
-	git.fractalqb.de/fractalqb/sllm v1.0.0 // indirect
+	git.fractalqb.de/fractalqb/sllm v0.12.1 // indirect
 	git.fractalqb.de/fractalqb/xsx v0.7.1
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/atotto/clipboard v0.1.4
