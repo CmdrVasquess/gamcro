@@ -21,12 +21,13 @@ command line interface. On Windows this might be the `cmd` tool or, more up-to-d
 
 Let's say you put the Gamcro executable, `gamcro.exe` on Win or simply `gamcro` on Unices, into
 its own folder `gamcro-dir`. And you also put a file with the HTTP basic auth `user:password`
-into that same directory. Then you should have a directory tree like this (Win example):
+into a subdirectory `data` in that same directory. Then you should have a directory tree like this (Win example):
 
 ```
 …\gamcro-dir\
    ├─ gamcro.exe
-   └─ auth.txt
+   └─ data\
+       └─ auth.txt
 ```
 
 Further more you decide to have the user “JohnDoe” with the password “secret” to be the one who may send commands to Gamcro. Then the content of `auth.txt` should be a single line:

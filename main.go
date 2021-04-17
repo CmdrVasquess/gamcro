@@ -9,25 +9,32 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"runtime"
 	"time"
 
 	"git.fractalqb.de/fractalqb/c4hgol"
+	"git.fractalqb.de/fractalqb/pack/ospath"
 	"git.fractalqb.de/fractalqb/qbsllm"
 	"github.com/gorilla/mux"
 )
 
 //go:generate versioner -bno build_no VERSION version.go
 
+const (
+	appName    = "gamcro"
+	newDirPerm = 0750
+)
+
 var (
 	srvAddr         string
+	passphr         []byte
 	tlsCert, tlsKey = "cert.pem", "key.pem"
 	authCreds       string
-	inLimit         = 256
+	txtLimit        = 256
 	fLog            string
+	paths           = ospath.NewApp(ospath.ExeDir(), appName)
 
-	log    = qbsllm.New(qbsllm.Lnormal, "gamcro", nil, nil)
+	log    = qbsllm.New(qbsllm.Lnormal, appName, nil, nil)
 	logCfg = qbsllm.NewConfig(log)
 
 	//go:embed banner.txt
@@ -36,16 +43,15 @@ var (
 	webfs embed.FS
 )
 
-func asset(p string) string {
-	return path.Join("assets", p)
-}
-
 func auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(wr http.ResponseWriter, rq *http.Request) {
 		if authCreds != "" {
 			user, pass, ok := rq.BasicAuth()
 			if !ok {
-				wr.Header().Set("WWW-Authenticate", `Basic realm="EDPC Event Receiver"`)
+				wr.Header().Set(
+					"WWW-Authenticate",
+					`Basic realm="JV:Gamcro Client Authentication"`,
+				)
 				http.Error(wr, "Unauthorized", http.StatusUnauthorized)
 				return
 			} else if ba := user + ":" + pass; ba != authCreds {
@@ -74,12 +80,13 @@ func showBanner() {
 
 func main() {
 	showBanner()
-	flag.StringVar(&srvAddr, "addr", ":9420", "server address")
-	flag.StringVar(&tlsCert, "cert", tlsCert, "TLS cert file to use for HTTPS")
-	flag.StringVar(&tlsKey, "key", tlsKey, "TLS key file to use for HTTPS")
-	flag.StringVar(&authCreds, "auth", "", "basic auth")
-	flag.IntVar(&inLimit, "lim", inLimit, "Limit the length of input")
-	flag.StringVar(&fLog, "log", "", "set log verbosity")
+	flag.StringVar(&srvAddr, "addr", ":9420", docSrvAddrFlag)
+	flag.StringVar(&tlsCert, "cert", paths.LocalData("cert.pem"), docTlsCertFlag)
+	flag.StringVar(&tlsKey, "key", paths.LocalData("key.pem"), docTlsKeyFlag)
+	flag.StringVar(&authCreds, "auth", "",
+		fmt.Sprintf(docAuthCredsFlag, defaultCredsFile))
+	flag.IntVar(&txtLimit, "text-limit", txtLimit, docTxtLimitFlag)
+	flag.StringVar(&fLog, "log", "", c4hgol.LevelCfgDoc(nil))
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, fLog, nil)
 
@@ -92,6 +99,19 @@ func main() {
 		webRoutes.PathPrefix("/s/").Handler(http.StripPrefix("/s/", staticHdlr))
 	}
 	apiRoutes(webRoutes)
+
+	// TODO elaborate encrypted storage
+	//var err error
+	// fmt.Print("Enter passphrase for file encryption (empty disables encryption): ")
+	// passphr, err = term.ReadPassword(int(os.Stdin.Fd()))
+	// fmt.Println()
+	// if err != nil {
+	// 	log.Fatale(err)
+	// } else if len(passphr) == 0 {
+	// 	log.Warns("Empty passphrase. File encryption diabled.")
+	// } else {
+	// 	log.Infos("File encryption enabled")
+	// }
 
 	if err := ensureCreds(); err != nil {
 		log.Fatale(err)

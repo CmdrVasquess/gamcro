@@ -20,8 +20,8 @@ func apiRoutes(r *mux.Router) {
 
 func rqBodyRd(rq *http.Request) io.Reader {
 	var rd io.Reader = rq.Body
-	if inLimit > 0 {
-		rd = io.LimitReader(rd, int64(inLimit))
+	if txtLimit > 0 {
+		rd = io.LimitReader(rd, int64(txtLimit))
 	}
 	return rd
 }
@@ -42,7 +42,7 @@ func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 		return
 	}
 	txt := string(body)
-	log.Debuga("type `str`", txt)
+	log.Infoa("keyboard/type `text`", txt)
 	robotgo.TypeStr(txt)
 }
 
@@ -50,7 +50,7 @@ func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
 	body, err := rqBody(rq)
 	if err == nil && len(body) > 0 {
 		s := string(body)
-		log.Debuga("`clip`", s)
+		log.Infoa("clip `text`", s)
 		if err = clipboard.WriteAll(s); err != nil {
 			log.Errore(err)
 		}

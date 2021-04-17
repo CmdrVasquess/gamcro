@@ -3,7 +3,7 @@ package main
 const (
 	Major   = 0
 	Minor   = 4
-	Patch   = 0
+	Patch   = 1
 	Quality = `alpha`
-	BuildNo = 34
+	BuildNo = 49
 )

@@ -1,6 +1,6 @@
 {
   "name": "Gamcro",
-  "version": "0.1.0",
+  "version": "0.4.1",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -18,7 +18,7 @@
     "@vue/compiler-sfc": "^3.0.0",
     "babel-eslint": "^10.1.0",
     "eslint": "^6.7.2",
-    "eslint-plugin-vue": "^7.0.0"
+    "eslint-plugin-vue": "^7.9.0"
   },
   "eslintConfig": {
     "root": true,
