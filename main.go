@@ -30,6 +30,8 @@ var (
 	passphr         []byte
 	tlsCert, tlsKey = "cert.pem", "key.pem"
 	authCreds       string
+	singleClient    string
+	multiClient     bool
 	txtLimit        = 256
 	fLog            string
 	paths           = ospath.NewApp(ospath.ExeDir(), appName)
@@ -45,25 +47,48 @@ var (
 
 func auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(wr http.ResponseWriter, rq *http.Request) {
-		if authCreds != "" {
-			user, pass, ok := rq.BasicAuth()
-			if !ok {
-				wr.Header().Set(
-					"WWW-Authenticate",
-					`Basic realm="JV:Gamcro Client Authentication"`,
-				)
-				http.Error(wr, "Unauthorized", http.StatusUnauthorized)
-				return
-			} else if ba := user + ":" + pass; ba != authCreds {
-				log.Warna("Failed basic auth with `user` and `password` from `client`",
-					user,
-					pass,
-					rq.RemoteAddr)
-				s := time.Duration(1000 + rand.Intn(2000))
-				time.Sleep(s * time.Millisecond)
-				http.Error(wr, "Forbidden", http.StatusForbidden)
+		if !multiClient && singleClient != "" {
+			h, _, err := net.SplitHostPort(rq.RemoteAddr)
+			if err != nil {
+				log.Errore(err)
+				http.Error(wr, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			if h != singleClient {
+				log.Warna("A 2nd `client` machine was blocked", rq.RemoteAddr)
+				log.Infoa("Current `client`", singleClient)
+				http.Error(wr, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
+		user, pass, ok := rq.BasicAuth()
+		if !ok {
+			wr.Header().Set(
+				"WWW-Authenticate",
+				`Basic realm="JV:Gamcro Client Authentication"`,
+			)
+			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
+			return
+		} else if ba := user + ":" + pass; ba != authCreds {
+			log.Warna("Failed basic auth with `user` and `password` from `client`",
+				user,
+				pass,
+				rq.RemoteAddr)
+			s := time.Duration(1000 + rand.Intn(2000))
+			time.Sleep(s * time.Millisecond)
+			http.Error(wr, "Forbidden", http.StatusForbidden)
+			return
+		} else {
+			log.Debuga("Authorized `client`", rq.RemoteAddr)
+		}
+		if singleClient == "" {
+			h, _, err := net.SplitHostPort(rq.RemoteAddr)
+			if err != nil {
+				log.Errore(err)
+				http.Error(wr, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			singleClient = h
 		}
 		h(wr, rq)
 	}
@@ -87,6 +112,7 @@ func main() {
 		fmt.Sprintf(docAuthCredsFlag, defaultCredsFile))
 	flag.IntVar(&txtLimit, "text-limit", txtLimit, docTxtLimitFlag)
 	flag.StringVar(&fLog, "log", "", c4hgol.LevelCfgDoc(nil))
+	flag.BoolVar(&multiClient, "multi-client", false, docMCltFlag)
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, fLog, nil)
 

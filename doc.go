@@ -39,4 +39,6 @@ credentials. The current settings are determined like this:
    of that file.`
 
 	docTxtLimitFlag = `Limit the length of text input to API.`
+
+	docMCltFlag = `Allow more than one client machine to send macros.`
 )

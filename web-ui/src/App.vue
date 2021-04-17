@@ -117,6 +117,7 @@ export default {
 <style>
 :root {
     --colBkg: #203244;
+    --colBkgT: #203244cc;
     --colFgr: #F0B80F;
     --colBBkg: #5F83A7;
 }
@@ -179,9 +180,11 @@ span.menu {
     z-index: 3;
     font-size: 160%;
     padding: .1em 0;
-    width: 1.4em;
+    width: 1.6em;
     text-align: center;
     cursor: pointer;
+    background-color: var(--colBkgT);
+    border-radius: 0 0 0 .3em;
 }
 aside.menu {
     position: fixed;

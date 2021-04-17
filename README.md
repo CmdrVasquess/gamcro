@@ -65,9 +65,24 @@ This will be much more useful when you use a browser on another computer. To do 
 
 _to be continued…_
 
-## Securiry
+## Security
 
-TODO
+First of all access to the Gamcro “REST” API is restricted by HTTP basic auth. I.e. whoever
+wants to send input to Gamcro has to authenticate with user and password that was set as
+described above in the _Using Gamcro_ section.
+
+TODO (as key points):
+
+* HTTPS protecst basic auth
+* HTTPS needs [X.509](https://en.wikipedia.org/wiki/X.509) certificates 
+* Certificate file and key file are set through flags
+* Where to get cert and key file:
+  * Create them yourself in whatever way ([openssl](https://www.openssl.org/), …)
+  * If both—cert and key file—are missing, Gamcro generates a key and a self-signed certificate
+* Key has to be kept secret! Protect your file. Risks: Someone else can pretend to be
+  Gamcro ⇒
+  * The browser that accepted the Gamcro certificate may be tricked by someone
+  * This someone may carry out a [MITM](https://en.wikipedia.org/wiki/Man-in-the-middle_attack) attack and, beside other thing, get client user and password
 
 ## API
 
@@ -76,11 +91,15 @@ TODO
 ## Develop
 ### Prerequisites
 
+* Web app build tools for `web-ui`: [vue-cli](https://cli.vuejs.org/) for [Vue.js 3](https://v3.vuejs.org/)
+
 * [Go SDK](https://go.dev/) 1.16+
 
-TODO (TL;DR “need [cgo](https://blog.golang.org/cgo)”)
+* TODO (TL;DR “need [cgo](https://blog.golang.org/cgo)”)
 
 ### Building
+
+Gamcro Web GUI is build with vue-cli.
 
 Gamcro can be build with standard `go build` command. This will produce a working executable
 for development purpose. To build a distribution run `go run mk/mk.go`. This will include 
