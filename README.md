@@ -26,8 +26,7 @@ into a subdirectory `data` in that same directory. Then you should have a direct
 ```
 …\gamcro-dir\
    ├─ gamcro.exe
-   └─ data\
-       └─ auth.txt
+   └─ auth.txt
 ```
 
 Further more you decide to have the user “JohnDoe” with the password “secret” to be the one who may send commands to Gamcro. Then the content of `auth.txt` should be a single line:
