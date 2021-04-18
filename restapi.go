@@ -3,6 +3,8 @@ package main
 import (
 	"io"
 	"net/http"
+	"strings"
+	"unicode"
 
 	"github.com/atotto/clipboard"
 	"github.com/go-vgo/robotgo"
@@ -20,8 +22,8 @@ func apiRoutes(r *mux.Router) {
 
 func rqBodyRd(rq *http.Request) io.Reader {
 	var rd io.Reader = rq.Body
-	if txtLimit > 0 {
-		rd = io.LimitReader(rd, int64(txtLimit))
+	if cfg.txtLimit > 0 {
+		rd = io.LimitReader(rd, int64(cfg.txtLimit))
 	}
 	return rd
 }
@@ -29,6 +31,21 @@ func rqBodyRd(rq *http.Request) io.Reader {
 func rqBody(rq *http.Request) ([]byte, error) {
 	rd := rqBodyRd(rq)
 	return io.ReadAll(rd)
+}
+
+// TODO implicitly convert []byte to filtered str: avoid one copy?
+func filterStr(s string, f func(rune) bool) string {
+	var sb strings.Builder
+	for _, r := range s {
+		if f(r) {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
+}
+
+func cleanText(s string) string {
+	return filterStr(s, unicode.IsGraphic)
 }
 
 func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
@@ -41,7 +58,7 @@ func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 	if len(body) == 0 {
 		return
 	}
-	txt := string(body)
+	txt := cleanText(string(body))
 	log.Infoa("keyboard/type `text`", txt)
 	robotgo.TypeStr(txt)
 }
@@ -49,7 +66,7 @@ func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
 	body, err := rqBody(rq)
 	if err == nil && len(body) > 0 {
-		s := string(body)
+		s := cleanText(string(body))
 		log.Infoa("clip `text`", s)
 		if err = clipboard.WriteAll(s); err != nil {
 			log.Errore(err)

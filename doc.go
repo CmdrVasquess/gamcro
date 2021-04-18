@@ -41,4 +41,7 @@ credentials. The current settings are determined like this:
 	docTxtLimitFlag = `Limit the length of text input to API.`
 
 	docMCltFlag = `Allow more than one client machine to send macros.`
+
+	docClientsFlag = `Which API clients are allowed. If clients is not 'all' only
+clients from the local network will be accepted.`
 )

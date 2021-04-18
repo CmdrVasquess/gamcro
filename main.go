@@ -5,12 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"runtime"
-	"time"
 
 	"git.fractalqb.de/fractalqb/c4hgol"
 	"git.fractalqb.de/fractalqb/pack/ospath"
@@ -25,16 +23,21 @@ const (
 	newDirPerm = 0750
 )
 
-var (
+type Config struct {
 	srvAddr         string
 	passphr         []byte
-	tlsCert, tlsKey = "cert.pem", "key.pem"
+	tlsCert, tlsKey string
 	authCreds       string
 	singleClient    string
 	multiClient     bool
-	txtLimit        = 256
-	fLog            string
-	paths           = ospath.NewApp(ospath.ExeDir(), appName)
+	clientNet       string
+	txtLimit        int
+}
+
+var (
+	cfg   = Config{txtLimit: 256}
+	fLog  string
+	paths = ospath.NewApp(ospath.ExeDir(), appName)
 
 	log    = qbsllm.New(qbsllm.Lnormal, appName, nil, nil)
 	logCfg = qbsllm.NewConfig(log)
@@ -44,55 +47,6 @@ var (
 	//go:embed web-ui/dist
 	webfs embed.FS
 )
-
-func auth(h http.HandlerFunc) http.HandlerFunc {
-	return func(wr http.ResponseWriter, rq *http.Request) {
-		if !multiClient && singleClient != "" {
-			h, _, err := net.SplitHostPort(rq.RemoteAddr)
-			if err != nil {
-				log.Errore(err)
-				http.Error(wr, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			if h != singleClient {
-				log.Warna("A 2nd `client` machine was blocked", rq.RemoteAddr)
-				log.Infoa("Current `client`", singleClient)
-				http.Error(wr, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-		}
-		user, pass, ok := rq.BasicAuth()
-		if !ok {
-			wr.Header().Set(
-				"WWW-Authenticate",
-				`Basic realm="JV:Gamcro Client Authentication"`,
-			)
-			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
-			return
-		} else if ba := user + ":" + pass; ba != authCreds {
-			log.Warna("Failed basic auth with `user` and `password` from `client`",
-				user,
-				pass,
-				rq.RemoteAddr)
-			s := time.Duration(1000 + rand.Intn(2000))
-			time.Sleep(s * time.Millisecond)
-			http.Error(wr, "Forbidden", http.StatusForbidden)
-			return
-		} else {
-			log.Debuga("Authorized `client`", rq.RemoteAddr)
-		}
-		if singleClient == "" {
-			h, _, err := net.SplitHostPort(rq.RemoteAddr)
-			if err != nil {
-				log.Errore(err)
-				http.Error(wr, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			singleClient = h
-		}
-		h(wr, rq)
-	}
-}
 
 func showBanner() {
 	os.Stdout.Write(banner)
@@ -105,14 +59,15 @@ func showBanner() {
 
 func main() {
 	showBanner()
-	flag.StringVar(&srvAddr, "addr", ":9420", docSrvAddrFlag)
-	flag.StringVar(&tlsCert, "cert", paths.LocalData("cert.pem"), docTlsCertFlag)
-	flag.StringVar(&tlsKey, "key", paths.LocalData("key.pem"), docTlsKeyFlag)
-	flag.StringVar(&authCreds, "auth", "",
+	flag.StringVar(&cfg.srvAddr, "addr", ":9420", docSrvAddrFlag)
+	flag.StringVar(&cfg.tlsCert, "cert", paths.LocalData("cert.pem"), docTlsCertFlag)
+	flag.StringVar(&cfg.tlsKey, "key", paths.LocalData("key.pem"), docTlsKeyFlag)
+	flag.StringVar(&cfg.authCreds, "auth", "",
 		fmt.Sprintf(docAuthCredsFlag, defaultCredsFile))
-	flag.IntVar(&txtLimit, "text-limit", txtLimit, docTxtLimitFlag)
+	flag.IntVar(&cfg.txtLimit, "text-limit", cfg.txtLimit, docTxtLimitFlag)
+	flag.BoolVar(&cfg.multiClient, "multi-client", false, docMCltFlag)
+	flag.StringVar(&cfg.clientNet, "clients", "local", docClientsFlag)
 	flag.StringVar(&fLog, "log", "", c4hgol.LevelCfgDoc(nil))
-	flag.BoolVar(&multiClient, "multi-client", false, docMCltFlag)
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, fLog, nil)
 
@@ -142,14 +97,14 @@ func main() {
 	if err := ensureCreds(); err != nil {
 		log.Fatale(err)
 	}
-	if err := ensureTLSCert(tlsCert, tlsKey); err != nil {
+	if err := ensureTLSCert(cfg.tlsCert, cfg.tlsKey); err != nil {
 		log.Fatale(err)
 	}
-	log.Infoa("Load TLS `certificate`", tlsCert)
-	log.Infoa("Load TLS `key`", tlsKey)
-	log.Infof("Runninig gamcro HTTPS server on %s", srvAddr)
+	log.Infoa("Load TLS `certificate`", cfg.tlsCert)
+	log.Infoa("Load TLS `key`", cfg.tlsKey)
+	log.Infof("Runninig gamcro HTTPS server on %s", cfg.srvAddr)
 	connectHint()
-	log.Fatale(http.ListenAndServeTLS(srvAddr, tlsCert, tlsKey, webRoutes))
+	log.Fatale(http.ListenAndServeTLS(cfg.srvAddr, cfg.tlsCert, cfg.tlsKey, webRoutes))
 }
 
 func handleUI(wr http.ResponseWriter, rq *http.Request) {
@@ -164,11 +119,11 @@ func handleUI(wr http.ResponseWriter, rq *http.Request) {
 }
 
 func connectHint() {
-	if srvAddr == "" {
+	if cfg.srvAddr == "" {
 		return
 	}
-	if srvAddr[0] != ':' {
-		log.Infof("Use https://%s/ to connect your browser to the Web UI", srvAddr)
+	if cfg.srvAddr[0] != ':' {
+		log.Infof("Use https://%s/ to connect your browser to the Web UI", cfg.srvAddr)
 		return
 	}
 	conn, _ := net.Dial("udp", "8.8.8.8:80")
@@ -176,7 +131,7 @@ func connectHint() {
 	addr := conn.LocalAddr().(*net.UDPAddr)
 	log.Infof("Use https://%s%s/ to connect your browser to the Web UI",
 		addr.IP,
-		srvAddr,
+		cfg.srvAddr,
 	)
 	// addrs, _ := net.InterfaceAddrs()
 	// for _, addr := range addrs {

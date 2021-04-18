@@ -21,8 +21,8 @@
 <span class="menu" v-else @click="menu=true">≡</span>
 <transition name="menu">
   <aside v-if="menu" class="menu">
-    <div>⮯ Import</div>
-    <div>Export ⮫</div>
+    <div>↴ Import</div>
+    <div>Export ↱</div>
   </aside>
 </transition>
 </template>

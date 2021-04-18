@@ -17,6 +17,7 @@ const (
 	tGen   target = "gen"
 	tWebUI target = "web-ui"
 	tBuild target = "build"
+	tTest  target = "test"
 	tDist  target = "dist"
 )
 
@@ -61,7 +62,11 @@ func init() {
 		dir.Exec("go", buildCmd...)
 	})
 
-	tasks.Def(tDist, nil, tWebUI, tGen, tBuild)
+	tasks.Def(tTest, func(dir *gomk.WDir) {
+		dir.Exec("go", "test", "./...")
+	})
+
+	tasks.Def(tDist, nil, tWebUI, tGen, tTest, tBuild)
 }
 
 func main() {
