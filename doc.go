@@ -44,4 +44,6 @@ credentials. The current settings are determined like this:
 
 	docClientsFlag = `Which API clients are allowed. If clients is not 'all' only
 clients from the local network will be accepted.`
+
+	docQRFlag = `Show connect URL as QR code`
 )

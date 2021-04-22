@@ -14,6 +14,7 @@ import (
 	"git.fractalqb.de/fractalqb/pack/ospath"
 	"git.fractalqb.de/fractalqb/qbsllm"
 	"github.com/gorilla/mux"
+	"github.com/skip2/go-qrcode"
 )
 
 //go:generate versioner -bno build_no VERSION version.go
@@ -37,6 +38,7 @@ type Config struct {
 var (
 	cfg   = Config{txtLimit: 256}
 	fLog  string
+	fQR   bool
 	paths = ospath.NewApp(ospath.ExeDir(), appName)
 
 	log    = qbsllm.New(qbsllm.Lnormal, appName, nil, nil)
@@ -67,6 +69,7 @@ func main() {
 	flag.IntVar(&cfg.txtLimit, "text-limit", cfg.txtLimit, docTxtLimitFlag)
 	flag.BoolVar(&cfg.multiClient, "multi-client", false, docMCltFlag)
 	flag.StringVar(&cfg.clientNet, "clients", "local", docClientsFlag)
+	flag.BoolVar(&fQR, "qr", false, docQRFlag)
 	flag.StringVar(&fLog, "log", "", c4hgol.LevelCfgDoc(nil))
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, fLog, nil)
@@ -77,7 +80,9 @@ func main() {
 		log.Fatale(err)
 	} else {
 		staticHdlr := http.FileServer(http.FS(staticDir))
-		webRoutes.PathPrefix("/s/").Handler(http.StripPrefix("/s/", staticHdlr))
+		webRoutes.PathPrefix("/s/").Handler(auth(
+			http.StripPrefix("/s/", staticHdlr).ServeHTTP,
+		))
 	}
 	apiRoutes(webRoutes)
 
@@ -104,6 +109,7 @@ func main() {
 	log.Infoa("Load TLS `key`", cfg.tlsKey)
 	log.Infof("Runninig gamcro HTTPS server on %s", cfg.srvAddr)
 	connectHint()
+	log.Infof("Authenticate to realm \"Gamcro: %s\"", currentRealmKey)
 	log.Fatale(http.ListenAndServeTLS(cfg.srvAddr, cfg.tlsCert, cfg.tlsKey, webRoutes))
 }
 
@@ -122,23 +128,23 @@ func connectHint() {
 	if cfg.srvAddr == "" {
 		return
 	}
+	var svcurl string
 	if cfg.srvAddr[0] != ':' {
-		log.Infof("Use https://%s/ to connect your browser to the Web UI", cfg.srvAddr)
-		return
+		svcurl = fmt.Sprintf("https://%s/", cfg.srvAddr)
+	} else {
+		conn, _ := net.Dial("udp", "8.8.8.8:80")
+		defer conn.Close()
+		addr := conn.LocalAddr().(*net.UDPAddr)
+		svcurl = fmt.Sprintf("https://%s%s/", addr.IP, cfg.srvAddr)
 	}
-	conn, _ := net.Dial("udp", "8.8.8.8:80")
-	defer conn.Close()
-	addr := conn.LocalAddr().(*net.UDPAddr)
-	log.Infof("Use https://%s%s/ to connect your browser to the Web UI",
-		addr.IP,
-		cfg.srvAddr,
-	)
-	// addrs, _ := net.InterfaceAddrs()
-	// for _, addr := range addrs {
-	// 	ipn, ok := addr.(*net.IPNet)
-	// 	if !ok || ipn.IP.IsLoopback() {
-	// 		continue
-	// 	}
-	// 	fmt.Printf("%s: %s\n", ipn.Network(), ipn)
-	// }
+	log.Infof("Use %s to connect your browser to the Web UI", svcurl)
+	if fQR {
+		qr, err := qrcode.New(svcurl, qrcode.Low)
+		if err != nil {
+			log.Errore(err)
+		} else {
+			art := qr.ToString(false)
+			fmt.Print(art)
+		}
+	}
 }

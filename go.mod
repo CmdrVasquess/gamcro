@@ -17,6 +17,7 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/shirou/gopsutil v3.21.3+incompatible // indirect
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2

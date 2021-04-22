@@ -319,6 +319,26 @@ func checkClient(rq *http.Request) (e string, code int) {
 	return "", 0
 }
 
+const realmChars = "0123456789ABCDEFGHJKLMNPQRTUVW"
+
+func makeRealmKey() string {
+	charNo := big.NewInt(int64(len(realmChars)))
+	var sb strings.Builder
+	for i := 0; i < 6; i++ {
+		c, err := rand.Int(rand.Reader, charNo)
+		if err != nil {
+			log.Fatale(err)
+		}
+		sb.WriteByte(realmChars[c.Uint64()])
+	}
+	return sb.String()
+}
+
+var (
+	currentRealmKey = makeRealmKey()
+	basicRealm      = fmt.Sprintf(`Basic realm="Gamcro: %s"`, currentRealmKey)
+)
+
 func auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(wr http.ResponseWriter, rq *http.Request) {
 		if emsg, code := checkClient(rq); code != 0 {
@@ -327,10 +347,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 		}
 		user, pass, ok := rq.BasicAuth()
 		if !ok {
-			wr.Header().Set(
-				"WWW-Authenticate",
-				`Basic realm="Gamcro Client Authentication"`,
-			)
+			wr.Header().Set("WWW-Authenticate", basicRealm)
 			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
 			return
 		} else if ba := user + ":" + pass; ba != cfg.authCreds {
