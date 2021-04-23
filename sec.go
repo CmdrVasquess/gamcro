@@ -5,8 +5,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -21,10 +24,10 @@ import (
 	"time"
 
 	"git.fractalqb.de/fractalqb/pack/ospath"
-
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
+	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/term"
 )
 
@@ -117,65 +120,42 @@ func ensureTLSCert(cert, key string) error {
 
 const defaultCredsFile = "auth.txt"
 
-func ensureCreds() (err error) {
+func ensureCreds(flag string) (err error) {
+	colonIdx := strings.IndexByte(flag, ':')
 	switch {
-	case cfg.authCreds == "":
+	case flag == "":
 		authFile := paths.LocalData(defaultCredsFile)
-		if _, err := os.Stat(authFile); err == nil {
+		if _, err = os.Stat(authFile); err == nil {
 			log.Infoa("HTTP basic auth configuration `file` detected", authFile)
 			log.Infoa("You can use -auth flag for different settings", authFile)
-			creds, err := readCredsFile(authFile)
+			err := cfg.clientAuth.readFile(authFile)
 			if err == nil {
-				cfg.authCreds = creds
 				return nil
 			}
 			log.Warne(err)
 		}
-		return userInputCreds()
-	case cfg.authCreds == ":":
-		return userInputCreds()
-	case strings.IndexByte(cfg.authCreds, ':') >= 0:
-		log.Warns("It is not secure to set passwords on the command line!")
-		me := filepath.Base(os.Args[0])
-		log.Infof("Better use '%s -auth <filename>' with restricted access to <filename>", me)
-		return nil
+		err = userInputCreds(&cfg.clientAuth)
+	case flag == ":":
+		err = userInputCreds(&cfg.clientAuth)
+	case colonIdx >= 0:
+		if colonIdx < len(flag)-1 {
+			me := filepath.Base(os.Args[0])
+			log.Warns("It is not secure to set passwords on the command line!")
+			log.Infof("Better use '%s -auth <filename>' with restricted access to <filename>", me)
+		}
 	default:
-		creds, err := readCredsFile(cfg.authCreds)
-		if err != nil {
-			return err
-		}
-		cfg.authCreds = creds
-		return nil
+		err = cfg.clientAuth.readFile(flag)
 	}
+	return err
+	// if strings.HasSuffix(flag, ":") {
+	// 	log.Warns("Cannot accept empty password")
+	// 	passwd := makeRandStr(passwdChars, 7)
+	// 	log.Infof("Using one-time password \"%s\"", passwd)
+	// 	cfg.clientAuth.set(flag[:len(flag)-1], passwd)
+	// }
 }
 
-func readCredsFile(name string) (string, error) {
-	log.Infoa("Read HTTP basic auth user:password from `file`", name)
-	rd, err := os.Open(name)
-	if err != nil {
-		return "", err
-	}
-	defer rd.Close()
-	var res string
-	err = cryptRead(rd, cfg.passphr, func(rd io.Reader) error {
-		scan := bufio.NewScanner(rd)
-		if !scan.Scan() {
-			return fmt.Errorf("auth file '%s' is empty", name)
-		}
-		res = scan.Text()
-		return nil
-	})
-	if err == nil {
-		if strings.IndexByte(res, ':') < 0 {
-			err = fmt.Errorf("invalid credentials in file '%s'", name)
-		}
-	} else if err == io.EOF {
-		err = fmt.Errorf("failed to read credentials from '%s': %s", name, err)
-	}
-	return res, err
-}
-
-func userInputCreds() (err error) {
+func userInputCreds(creds *authCreds) (err error) {
 	log.Infos("Need user and password for HTTP basic auth")
 	var usr string
 	fmt.Print("Enter HTTP basic auth user: ")
@@ -200,29 +180,19 @@ func userInputCreds() (err error) {
 		fmt.Println()
 		log.Infos("Passwords missmatch")
 	}
-	cfg.authCreds = usr + ":" + string(pass1)
-	if len(cfg.passphr) > 0 {
-		authFile := paths.LocalData(defaultCredsFile)
-		fmt.Printf("\nSave user:password to '%s' (y/N)?", authFile)
-		var answer string
-		if _, err = fmt.Scan(&answer); err != nil {
+	cfg.clientAuth.set(usr, string(pass1))
+	authFile := paths.LocalData(defaultCredsFile)
+	fmt.Printf("\nSave user:password to '%s' (y/N)?", authFile)
+	var answer string
+	if _, err = fmt.Scan(&answer); err != nil {
+		return err
+	}
+	if l := strings.ToLower(answer); l == "y" || l == "yes" {
+		if _, err := ospath.ProvideDir(newDirPerm, authFile); err != nil {
 			return err
 		}
-		if l := strings.ToLower(answer); l == "y" || l == "yes" {
-			if _, err := ospath.ProvideDir(newDirPerm, authFile); err != nil {
-				return err
-			}
-			wr, err := os.Create(authFile)
-			if err != nil {
-				return err
-			}
-			defer wr.Close()
-			err = cryptWrite(wr, cfg.passphr, func(wr io.Writer) error {
-				_, err = fmt.Fprintln(wr, cfg.authCreds)
-				return err
-			})
-			return err
-		}
+		err = cfg.clientAuth.writeFile(authFile)
+		return err
 	}
 	fmt.Println()
 	return nil
@@ -268,18 +238,18 @@ func cryptRead(rd io.Reader, passwd []byte, do func(io.Reader) error) error {
 
 type localNetList []*net.IPNet
 
-func newLocalNetList() (res localNetList) {
+func newLocalNetList() (line localNetList) {
 	ifs, _ := net.Interfaces()
 	for _, i := range ifs {
 		addrs, _ := i.Addrs()
 		for _, addr := range addrs {
 			ipnet, ok := addr.(*net.IPNet)
 			if ok {
-				res = append(res, ipnet)
+				line = append(line, ipnet)
 			}
 		}
 	}
-	return res
+	return line
 }
 
 func (lnl localNetList) contains(ip net.IP) bool {
@@ -320,22 +290,125 @@ func checkClient(rq *http.Request) (e string, code int) {
 }
 
 const realmChars = "0123456789ABCDEFGHJKLMNPQRTUVW"
+const passwdChars = "0123456789ABCDEFGHJKLMNPQRTUVWabcdefghjklmnpqrtuvw!#$%&+,.-/:;=_~"
 
-func makeRealmKey() string {
-	charNo := big.NewInt(int64(len(realmChars)))
+func makeRandStr(chars string, strlen int) string {
+	charNo := big.NewInt(int64(len(chars)))
 	var sb strings.Builder
-	for i := 0; i < 6; i++ {
+	for strlen > 0 {
 		c, err := rand.Int(rand.Reader, charNo)
 		if err != nil {
 			log.Fatale(err)
 		}
-		sb.WriteByte(realmChars[c.Uint64()])
+		sb.WriteByte(chars[c.Uint64()])
+		strlen--
 	}
 	return sb.String()
 }
 
+type authCreds struct {
+	user string
+	salt []byte
+	pass []byte
+}
+
+const (
+	authIter   = 4096
+	authKeyLen = 24
+)
+
+func (ac *authCreds) set(user, passwd string) (err error) {
+	if ac.salt == nil {
+		ac.salt = make([]byte, 12)
+	}
+	if _, err = rand.Read(ac.salt); err != nil {
+		return err
+	}
+	ac.user = user
+	ac.pass = pbkdf2.Key([]byte(passwd), ac.salt, authIter, authKeyLen, sha256.New)
+	return nil
+}
+
+func (ac *authCreds) check(user, passwd string) bool {
+	if ac.user != user {
+		return false
+	}
+	if len(ac.salt) == 0 {
+		return string(ac.pass) == passwd
+	}
+	h := pbkdf2.Key([]byte(passwd), ac.salt, authIter, authKeyLen, sha256.New)
+	return subtle.ConstantTimeCompare(h, ac.pass) == 1
+}
+
+func (ac *authCreds) writeFile(name string) error {
+	tmpf := name + "~"
+	wr, err := os.Create(tmpf)
+	if err != nil {
+		return err
+	}
+	defer wr.Close()
+	err = cryptWrite(wr, cfg.passphr, func(wr io.Writer) error {
+		if len(ac.pass) == 0 {
+			_, err = fmt.Fprintf(wr, "%s:%s", ac.user, string(ac.pass))
+			return err
+		}
+		if _, err = fmt.Fprintln(wr, ac.user); err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(ac.salt))
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(ac.pass))
+		return err
+	})
+	if err := wr.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpf, name)
+}
+
+func (ac *authCreds) readFile(name string) error {
+	log.Infoa("Read HTTP basic auth user:password from `file`", name)
+	rd, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer rd.Close()
+	err = cryptRead(rd, cfg.passphr, func(rd io.Reader) error {
+		scan := bufio.NewScanner(rd)
+		if !scan.Scan() {
+			return fmt.Errorf("auth file '%s' is empty", name)
+		}
+		line := scan.Text()
+		if strings.IndexByte(line, ':') >= 0 {
+			parts := strings.Split(line, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid cleartext credentials line in %s", name)
+			}
+			log.Warns("Creadential file in cleartext form.")
+			log.Infos("Use Gamcro interactive input to create file with hashed password.")
+			return ac.set(parts[0], parts[1])
+		}
+		ac.user = line
+		if !scan.Scan() {
+			return fmt.Errorf("premature end of auth file %s", name)
+		}
+		ac.salt, err = base64.StdEncoding.DecodeString(scan.Text())
+		if err != nil {
+			return err
+		}
+		if !scan.Scan() {
+			return fmt.Errorf("premature end of auth file %s", name)
+		}
+		ac.pass, err = base64.StdEncoding.DecodeString(scan.Text())
+		return err
+	})
+	return err
+}
+
 var (
-	currentRealmKey = makeRealmKey()
+	currentRealmKey = makeRandStr(realmChars, 6)
 	basicRealm      = fmt.Sprintf(`Basic realm="Gamcro: %s"`, currentRealmKey)
 )
 
@@ -350,7 +423,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 			wr.Header().Set("WWW-Authenticate", basicRealm)
 			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
 			return
-		} else if ba := user + ":" + pass; ba != cfg.authCreds {
+		} else if !cfg.clientAuth.check(user, pass) {
 			log.Warna("Failed basic auth with `user` and `password` from `client`",
 				user,
 				pass,
@@ -360,7 +433,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 			http.Error(wr, "Forbidden", http.StatusForbidden)
 			return
 		} else {
-			log.Debuga("Authorized `client`", rq.RemoteAddr)
+			log.Tracea("Authorized `client`", rq.RemoteAddr)
 		}
 		if cfg.singleClient == "" {
 			h, _, err := net.SplitHostPort(rq.RemoteAddr)
@@ -369,6 +442,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 				http.Error(wr, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			log.Infoa("Locked to single `client address`", h)
 			cfg.singleClient = h
 		}
 		h(wr, rq)

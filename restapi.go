@@ -20,16 +20,17 @@ func apiRoutes(r *mux.Router) {
 		HeadersRegexp("Content-Type", "text/plain")
 }
 
-func rqBodyRd(rq *http.Request) io.Reader {
-	var rd io.Reader = rq.Body
+func rqBodyRd(wr http.ResponseWriter, rq *http.Request) io.ReadCloser {
+	var rd io.ReadCloser = rq.Body
 	if cfg.txtLimit > 0 {
-		rd = io.LimitReader(rd, int64(cfg.txtLimit))
+		rd = http.MaxBytesReader(wr, rq.Body, int64(cfg.txtLimit))
 	}
 	return rd
 }
 
-func rqBody(rq *http.Request) ([]byte, error) {
-	rd := rqBodyRd(rq)
+func rqBody(wr http.ResponseWriter, rq *http.Request) ([]byte, error) {
+	rd := rqBodyRd(wr, rq)
+	defer rd.Close()
 	return io.ReadAll(rd)
 }
 
@@ -49,7 +50,7 @@ func cleanText(s string) string {
 }
 
 func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
-	body, err := rqBody(rq)
+	body, err := rqBody(wr, rq)
 	if err != nil {
 		log.Errora("Read body failed with `err`", err)
 		http.Error(wr, "internal server error", http.StatusInternalServerError)
@@ -64,7 +65,7 @@ func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 }
 
 func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
-	body, err := rqBody(rq)
+	body, err := rqBody(wr, rq)
 	if err == nil && len(body) > 0 {
 		s := cleanText(string(body))
 		log.Infoa("clip `text`", s)

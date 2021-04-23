@@ -28,7 +28,7 @@ type Config struct {
 	srvAddr         string
 	passphr         []byte
 	tlsCert, tlsKey string
-	authCreds       string
+	clientAuth      authCreds
 	singleClient    string
 	multiClient     bool
 	clientNet       string
@@ -64,8 +64,7 @@ func main() {
 	flag.StringVar(&cfg.srvAddr, "addr", ":9420", docSrvAddrFlag)
 	flag.StringVar(&cfg.tlsCert, "cert", paths.LocalData("cert.pem"), docTlsCertFlag)
 	flag.StringVar(&cfg.tlsKey, "key", paths.LocalData("key.pem"), docTlsKeyFlag)
-	flag.StringVar(&cfg.authCreds, "auth", "",
-		fmt.Sprintf(docAuthCredsFlag, defaultCredsFile))
+	authFlag := flag.String("auth", "", fmt.Sprintf(docAuthCredsFlag, defaultCredsFile))
 	flag.IntVar(&cfg.txtLimit, "text-limit", cfg.txtLimit, docTxtLimitFlag)
 	flag.BoolVar(&cfg.multiClient, "multi-client", false, docMCltFlag)
 	flag.StringVar(&cfg.clientNet, "clients", "local", docClientsFlag)
@@ -99,7 +98,7 @@ func main() {
 	// 	log.Infos("File encryption enabled")
 	// }
 
-	if err := ensureCreds(); err != nil {
+	if err := ensureCreds(*authFlag); err != nil {
 		log.Fatale(err)
 	}
 	if err := ensureTLSCert(cfg.tlsCert, cfg.tlsKey); err != nil {
