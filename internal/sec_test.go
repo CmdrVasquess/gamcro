@@ -1,7 +1,6 @@
-package main
+package internal
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -49,12 +48,13 @@ func TestAuthCreds_file(t *testing.T) {
 
 func TestAuth(t *testing.T) {
 	if testing.Verbose() {
-		logCfg.SetLevel(c4hgol.Debug)
+		LogCfg.SetLevel(c4hgol.Debug)
 	} else {
-		logCfg.SetOutput(io.Discard)
+		LogCfg.SetOutput(io.Discard)
 	}
-	cfg.clientAuth.set("test", "test")
-	hdlr := auth(func(wr http.ResponseWriter, rq *http.Request) {
+	var gamcro Gamcro
+	gamcro.clientAuth.set("test", "test")
+	hdlr := gamcro.auth(func(wr http.ResponseWriter, rq *http.Request) {
 		wr.WriteHeader(http.StatusOK)
 	})
 	t.Run("wrong auth", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestAuth(t *testing.T) {
 			t.Errorf("expect 403 Forbidden, got: %s", rrec.Result().Status)
 		}
 	})
-	cfg.singleClient = ""
+	gamcro.singleClient = ""
 	t.Run("reject non-local address", func(t *testing.T) {
 		rq := httptest.NewRequest("", "/", nil)
 		rq.RemoteAddr = "8.8.8.8:4711"

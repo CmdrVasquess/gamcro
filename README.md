@@ -99,7 +99,7 @@ _to be continued…_
 
 Running Gamcro as a web server on a local machine makes security
 somewhat challenging. Standard mechanisms on the internet heavily rely
-on a trusted 3rd party that is trusted by especially by the client but
+on a trusted 3rd party that is trusted especially by the client but
 also by the server. In Gamcro's setup there simply is no 3rd party.
 
 _Feedback on these considerations is greatly appreciated._
@@ -137,20 +137,20 @@ range like `192.168.0.1` or `[::1]`.
 
 This leaves us with self-signed certificates. With Go its fairly easy
 to let Gamcro create self-signed certificates. Self-signed
-certificates, however they were created, won't be accepted by HTTP
-clients by default—which is a good thing. To use Gamcro this puts a
-burden upon the user:
+certificates, no matter how they were created, are not accepted by
+HTTP clients by default—which is a good thing. To use them with Gamcro
+puts a burden upon the user:
 
 _User must decide responsibly to accept Gamcro's self-signed
 certificate._ And users must not be accustomed to doing this
 light-heartedly. However, currently I don't see a way around it.
 
 Let's go and think one step further. I don't want the user get used to
-accepting self-signed certificates. This means that the certificate
-and, more importantly, its _private key_ have to be stored
-somewhere. Then Gamcro does not need to create a new certificate on
-every start and the user won't be asked every time to accept a new
-certificate when he connects to Gamcro.
+accepting self-signed certificates. If Gamcro would store the
+certificate and—more importantly—its _private key_ somewhere, then
+Gamcro does not need to create a new certificate on every start and
+the user won't be asked every time to accept a new certificate when he
+connects to Gamcro.
 
 Nice, but storing the private key puts another burden onto the user:
 _Users have to keep the_ private key _private!_ I.e. no other program
@@ -179,10 +179,10 @@ As threatening as it is, this would have to happen on the same machine
 as Gamcro runs on. At least as long as nobody also tampers with your
 network routing.
 
-This is why I'd prefer to have HTTP encryption without
+For the Gamcro use case I'd prefer to have HTTP encryption without
 certificates. As mentioned above, Gamcro users have access to the
 client and the server machine at the same time. It would be easy for
-the user to compare an OTP, e.g. as part of the basic auth realm, in
+the user to compare a nonce, e.g. as part of the basic auth realm, in
 the browser with the same value in the Gamcro window. But as of my
 recent reading, [RFC4279](https://tools.ietf.org/html/rfc4279) and
 [RFC5054](https://tools.ietf.org/html/rfc5054) are not widely

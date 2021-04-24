@@ -1,149 +1,92 @@
 package main
 
 import (
-	"embed"
+	_ "embed"
 	"flag"
 	"fmt"
-	"io/fs"
-	"net"
-	"net/http"
 	"os"
 	"runtime"
 
 	"git.fractalqb.de/fractalqb/c4hgol"
 	"git.fractalqb.de/fractalqb/pack/ospath"
-	"git.fractalqb.de/fractalqb/qbsllm"
-	"github.com/gorilla/mux"
-	"github.com/skip2/go-qrcode"
+	"github.com/CmdrVasquess/gamcro/internal"
 )
-
-//go:generate versioner -bno build_no VERSION version.go
-
-const (
-	appName    = "gamcro"
-	newDirPerm = 0750
-)
-
-type Config struct {
-	srvAddr         string
-	passphr         []byte
-	tlsCert, tlsKey string
-	clientAuth      authCreds
-	singleClient    string
-	multiClient     bool
-	clientNet       string
-	txtLimit        int
-}
 
 var (
-	cfg   = Config{txtLimit: 256}
-	fLog  string
-	fQR   bool
-	paths = ospath.NewApp(ospath.ExeDir(), appName)
+	gamcro internal.Gamcro
 
-	log    = qbsllm.New(qbsllm.Lnormal, appName, nil, nil)
-	logCfg = qbsllm.NewConfig(log)
-
+	paths = ospath.NewApp(ospath.ExeDir(), internal.AppName)
 	//go:embed banner.txt
 	banner []byte
-	//go:embed web-ui/dist
-	webfs embed.FS
 )
 
 func showBanner() {
 	os.Stdout.Write(banner)
 	fmt.Printf("v%d.%d.%d [%s #%d; %s]\n",
-		Major, Minor, Patch,
-		Quality, BuildNo,
+		internal.Major, internal.Minor, internal.Patch,
+		internal.Quality, internal.BuildNo,
 		runtime.Version(),
 	)
 }
 
 func main() {
 	showBanner()
-	flag.StringVar(&cfg.srvAddr, "addr", ":9420", docSrvAddrFlag)
-	flag.StringVar(&cfg.tlsCert, "cert", paths.LocalData("cert.pem"), docTlsCertFlag)
-	flag.StringVar(&cfg.tlsKey, "key", paths.LocalData("key.pem"), docTlsKeyFlag)
-	authFlag := flag.String("auth", "", fmt.Sprintf(docAuthCredsFlag, defaultCredsFile))
-	flag.IntVar(&cfg.txtLimit, "text-limit", cfg.txtLimit, docTxtLimitFlag)
-	flag.BoolVar(&cfg.multiClient, "multi-client", false, docMCltFlag)
-	flag.StringVar(&cfg.clientNet, "clients", "local", docClientsFlag)
-	flag.BoolVar(&fQR, "qr", false, docQRFlag)
-	flag.StringVar(&fLog, "log", "", c4hgol.LevelCfgDoc(nil))
+	flag.StringVar(&gamcro.SrvAddr, "addr", ":9420", docSrvAddrFlag)
+	flag.StringVar(&gamcro.TLSCert, "cert", paths.LocalData("cert.pem"), docTlsCertFlag)
+	flag.StringVar(&gamcro.TLSKey, "key", paths.LocalData("key.pem"), docTlsKeyFlag)
+	authFlag := flag.String("auth", "", fmt.Sprintf(docAuthCredsFlag, internal.DefaultCredsFile))
+	flag.IntVar(&gamcro.TxtLimit, "text-limit", 256, docTxtLimitFlag)
+	flag.BoolVar(&gamcro.MultiClient, "multi-client", false, docMCltFlag)
+	flag.StringVar(&gamcro.ClientNet, "clients", "local", docClientsFlag)
+	fQR := flag.Bool("qr", false, docQRFlag)
+	fLog := flag.String("log", "", c4hgol.LevelCfgDoc(nil))
 	flag.Parse()
-	c4hgol.SetLevel(logCfg, fLog, nil)
-
-	webRoutes := mux.NewRouter()
-	webRoutes.HandleFunc("/", handleUI)
-	if staticDir, err := fs.Sub(webfs, "web-ui/dist"); err != nil {
-		log.Fatale(err)
-	} else {
-		staticHdlr := http.FileServer(http.FS(staticDir))
-		webRoutes.PathPrefix("/s/").Handler(auth(
-			http.StripPrefix("/s/", staticHdlr).ServeHTTP,
-		))
-	}
-	apiRoutes(webRoutes)
-
-	// TODO elaborate encrypted storage
-	//var err error
-	// fmt.Print("Enter passphrase for file encryption (empty disables encryption): ")
-	// passphr, err = term.ReadPassword(int(os.Stdin.Fd()))
-	// fmt.Println()
-	// if err != nil {
-	// 	log.Fatale(err)
-	// } else if len(passphr) == 0 {
-	// 	log.Warns("Empty passphrase. File encryption diabled.")
-	// } else {
-	// 	log.Infos("File encryption enabled")
-	// }
-
-	if err := ensureCreds(*authFlag); err != nil {
-		log.Fatale(err)
-	}
-	if err := ensureTLSCert(cfg.tlsCert, cfg.tlsKey); err != nil {
-		log.Fatale(err)
-	}
-	log.Infoa("Load TLS `certificate`", cfg.tlsCert)
-	log.Infoa("Load TLS `key`", cfg.tlsKey)
-	log.Infof("Runninig gamcro HTTPS server on %s", cfg.srvAddr)
-	connectHint()
-	log.Infof("Authenticate to realm \"Gamcro: %s\"", currentRealmKey)
-	log.Fatale(http.ListenAndServeTLS(cfg.srvAddr, cfg.tlsCert, cfg.tlsKey, webRoutes))
+	c4hgol.SetLevel(internal.LogCfg, *fLog, nil)
+	gamcro.Run(paths, *authFlag, *fQR)
 }
 
-func handleUI(wr http.ResponseWriter, rq *http.Request) {
-	if rq.Method != http.MethodGet {
-		http.Error(wr, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if rq.URL.Path != "/" {
-		http.Error(wr, "not found", http.StatusNotFound)
-	}
-	http.Redirect(wr, rq, "/s/index.html", http.StatusSeeOther)
-}
+const (
+	docSrvAddrFlag = `This is the local address the API server and the UI server
+listen to. Most people should be fine with the default. If
+you just need to set a different port number <port> set
+the flag value ":<port>". For more details read the description
+of the address parameter in https://golang.org/pkg/net/#Listen
+`
 
-func connectHint() {
-	if cfg.srvAddr == "" {
-		return
-	}
-	var svcurl string
-	if cfg.srvAddr[0] != ':' {
-		svcurl = fmt.Sprintf("https://%s/", cfg.srvAddr)
-	} else {
-		conn, _ := net.Dial("udp", "8.8.8.8:80")
-		defer conn.Close()
-		addr := conn.LocalAddr().(*net.UDPAddr)
-		svcurl = fmt.Sprintf("https://%s%s/", addr.IP, cfg.srvAddr)
-	}
-	log.Infof("Use %s to connect your browser to the Web UI", svcurl)
-	if fQR {
-		qr, err := qrcode.New(svcurl, qrcode.Low)
-		if err != nil {
-			log.Errore(err)
-		} else {
-			art := qr.ToString(false)
-			fmt.Print(art)
-		}
-	}
-}
+	docTlsCertFlag = `TLS certificate file to use for HTTPS.
+If neither the certificate nor the key file exist, Gamcro will
+generate them with an self-signed X.509 certificate.
+`
+
+	docTlsKeyFlag = `TLS key file to use for HTTPS.
+If neither the certificate nor the key file exist, Gamcro will
+generate them with an self-signed X.509 certificate.
+`
+
+	docAuthCredsFlag = `Access to the API server is protected by HTTP basic auth.
+A single <user>:<password> pair will be used to check a user's
+authorization. Use this flags to set the <user>:<password>
+credentials. The current settings are determined like this:
+ - When the 'auth' falg is empty, Gamcro checks for the file
+   '%[1]s' in the same folder as the Gamcro executable.
+   When present Gamcro reads <user>:<password> from the first
+   text line of the file. Keep read access to that file as
+   restrictive as possible.
+ - When 'auth' flag is set to ":" Gamcro ignores the '%[1]s'
+   file in the executables directory and reads <user> and
+   <password> from the terminal.
+ - Otherwise when 'auth' flag's value contains ':' Gamcro
+   considers 'auth' flag to be <user>:<password> and uses is.
+ - Else 'auth' flag is considered to be a filename and Gamcro
+   will try to read <user>:<password> from the first text line
+   of that file.`
+
+	docTxtLimitFlag = `Limit the length of text input to API.`
+
+	docMCltFlag = `Allow more than one client machine to send macros.`
+
+	docClientsFlag = `Which API clients are allowed. If clients is not 'all' only
+clients from the local network will be accepted.`
+
+	docQRFlag = `Show connect URL as QR code`
+)

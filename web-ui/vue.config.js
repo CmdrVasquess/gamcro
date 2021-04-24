@@ -1,3 +1,4 @@
 module.exports = {
-  publicPath: '/s/'
+  publicPath: '/s/',
+  outputDir: '../internal/webui'
 }

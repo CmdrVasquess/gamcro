@@ -1,5 +1,6 @@
 *~
 *.backup
+*.test
 *.debug
 *.exe
 *.pem
@@ -7,3 +8,4 @@
 /proto
 /README.html
 
+/auth.txt

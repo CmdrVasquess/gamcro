@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"bufio"
@@ -118,25 +118,25 @@ func ensureTLSCert(cert, key string) error {
 	return newTLSCert(cert, key, "JV:Gamcro")
 }
 
-const defaultCredsFile = "auth.txt"
+const DefaultCredsFile = "auth.txt"
 
-func ensureCreds(flag string) (err error) {
+func (g *Gamcro) ensureCreds(flag string, paths ospath.AppPaths) (err error) {
 	colonIdx := strings.IndexByte(flag, ':')
 	switch {
 	case flag == "":
-		authFile := paths.LocalData(defaultCredsFile)
+		authFile := paths.LocalData(DefaultCredsFile)
 		if _, err = os.Stat(authFile); err == nil {
 			log.Infoa("HTTP basic auth configuration `file` detected", authFile)
 			log.Infoa("You can use -auth flag for different settings", authFile)
-			err := cfg.clientAuth.readFile(authFile)
+			err := g.clientAuth.readFile(authFile)
 			if err == nil {
 				return nil
 			}
 			log.Warne(err)
 		}
-		err = userInputCreds(&cfg.clientAuth)
+		err = g.userInputCreds(paths, &g.clientAuth)
 	case flag == ":":
-		err = userInputCreds(&cfg.clientAuth)
+		err = g.userInputCreds(paths, &g.clientAuth)
 	case colonIdx >= 0:
 		if colonIdx < len(flag)-1 {
 			me := filepath.Base(os.Args[0])
@@ -144,7 +144,7 @@ func ensureCreds(flag string) (err error) {
 			log.Infof("Better use '%s -auth <filename>' with restricted access to <filename>", me)
 		}
 	default:
-		err = cfg.clientAuth.readFile(flag)
+		err = g.clientAuth.readFile(flag)
 	}
 	return err
 	// if strings.HasSuffix(flag, ":") {
@@ -155,7 +155,7 @@ func ensureCreds(flag string) (err error) {
 	// }
 }
 
-func userInputCreds(creds *authCreds) (err error) {
+func (g *Gamcro) userInputCreds(paths ospath.AppPaths, creds *authCreds) (err error) {
 	log.Infos("Need user and password for HTTP basic auth")
 	var usr string
 	fmt.Print("Enter HTTP basic auth user: ")
@@ -180,8 +180,8 @@ func userInputCreds(creds *authCreds) (err error) {
 		fmt.Println()
 		log.Infos("Passwords missmatch")
 	}
-	cfg.clientAuth.set(usr, string(pass1))
-	authFile := paths.LocalData(defaultCredsFile)
+	g.clientAuth.set(usr, string(pass1))
+	authFile := paths.LocalData(DefaultCredsFile)
 	fmt.Printf("\nSave user:password to '%s' (y/N)?", authFile)
 	var answer string
 	if _, err = fmt.Scan(&answer); err != nil {
@@ -191,7 +191,7 @@ func userInputCreds(creds *authCreds) (err error) {
 		if _, err := ospath.ProvideDir(newDirPerm, authFile); err != nil {
 			return err
 		}
-		err = cfg.clientAuth.writeFile(authFile)
+		err = g.clientAuth.writeFile(authFile)
 		return err
 	}
 	fmt.Println()
@@ -264,13 +264,13 @@ func (lnl localNetList) contains(ip net.IP) bool {
 
 var localNets localNetList
 
-func checkClient(rq *http.Request) (e string, code int) {
+func (g *Gamcro) checkClient(rq *http.Request) (e string, code int) {
 	chost, _, err := net.SplitHostPort(rq.RemoteAddr)
 	if err != nil {
 		log.Errore(err)
 		return "Internal Server Error", http.StatusInternalServerError
 	}
-	if cfg.clientNet != "all" {
+	if g.ClientNet != "all" {
 		if cip := net.ParseIP(chost); cip == nil {
 			log.Errora("Cannot parse `client host`", chost)
 			return "Internal Server Error", http.StatusInternalServerError
@@ -279,10 +279,10 @@ func checkClient(rq *http.Request) (e string, code int) {
 			return "Forbidden", http.StatusForbidden
 		}
 	}
-	if !cfg.multiClient && cfg.singleClient != "" {
-		if chost != cfg.singleClient {
+	if !g.MultiClient && g.singleClient != "" {
+		if chost != g.singleClient {
 			log.Warna("A 2nd `client` machine was blocked", rq.RemoteAddr)
-			log.Infoa("Current `client`", cfg.singleClient)
+			log.Infoa("Current `client`", g.singleClient)
 			return "Forbidden", http.StatusForbidden
 		}
 	}
@@ -347,21 +347,21 @@ func (ac *authCreds) writeFile(name string) error {
 		return err
 	}
 	defer wr.Close()
-	err = cryptWrite(wr, cfg.passphr, func(wr io.Writer) error {
-		if len(ac.pass) == 0 {
-			_, err = fmt.Fprintf(wr, "%s:%s", ac.user, string(ac.pass))
-			return err
-		}
-		if _, err = fmt.Fprintln(wr, ac.user); err != nil {
-			return err
-		}
-		_, err = fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(ac.salt))
-		if err != nil {
-			return err
-		}
-		_, err = fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(ac.pass))
+	if len(ac.pass) == 0 {
+		_, err = fmt.Fprintf(wr, "%s:%s", ac.user, string(ac.pass))
 		return err
-	})
+	}
+	if _, err = fmt.Fprintln(wr, ac.user); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(ac.salt))
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(ac.pass))
+	if err != nil {
+		return err
+	}
 	if err := wr.Close(); err != nil {
 		return err
 	}
@@ -375,35 +375,33 @@ func (ac *authCreds) readFile(name string) error {
 		return err
 	}
 	defer rd.Close()
-	err = cryptRead(rd, cfg.passphr, func(rd io.Reader) error {
-		scan := bufio.NewScanner(rd)
-		if !scan.Scan() {
-			return fmt.Errorf("auth file '%s' is empty", name)
+	scan := bufio.NewScanner(rd)
+	if !scan.Scan() {
+		return fmt.Errorf("auth file '%s' is empty", name)
+	}
+	line := scan.Text()
+	if strings.IndexByte(line, ':') >= 0 {
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid cleartext credentials line in %s", name)
 		}
-		line := scan.Text()
-		if strings.IndexByte(line, ':') >= 0 {
-			parts := strings.Split(line, ":")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid cleartext credentials line in %s", name)
-			}
-			log.Warns("Creadential file in cleartext form.")
-			log.Infos("Use Gamcro interactive input to create file with hashed password.")
-			return ac.set(parts[0], parts[1])
-		}
-		ac.user = line
-		if !scan.Scan() {
-			return fmt.Errorf("premature end of auth file %s", name)
-		}
-		ac.salt, err = base64.StdEncoding.DecodeString(scan.Text())
-		if err != nil {
-			return err
-		}
-		if !scan.Scan() {
-			return fmt.Errorf("premature end of auth file %s", name)
-		}
-		ac.pass, err = base64.StdEncoding.DecodeString(scan.Text())
+		log.Warns("Creadential file in cleartext form.")
+		log.Infos("Use Gamcro interactive input to create file with hashed password.")
+		return ac.set(parts[0], parts[1])
+	}
+	ac.user = line
+	if !scan.Scan() {
+		return fmt.Errorf("premature end of auth file %s", name)
+	}
+	ac.salt, err = base64.StdEncoding.DecodeString(scan.Text())
+	if err != nil {
 		return err
-	})
+	}
+	if !scan.Scan() {
+		return fmt.Errorf("premature end of auth file %s", name)
+	}
+	ac.pass, err = base64.StdEncoding.DecodeString(scan.Text())
+	return err
 	return err
 }
 
@@ -412,9 +410,9 @@ var (
 	basicRealm      = fmt.Sprintf(`Basic realm="Gamcro: %s"`, currentRealmKey)
 )
 
-func auth(h http.HandlerFunc) http.HandlerFunc {
+func (g *Gamcro) auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(wr http.ResponseWriter, rq *http.Request) {
-		if emsg, code := checkClient(rq); code != 0 {
+		if emsg, code := g.checkClient(rq); code != 0 {
 			http.Error(wr, emsg, code)
 			return
 		}
@@ -423,7 +421,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 			wr.Header().Set("WWW-Authenticate", basicRealm)
 			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
 			return
-		} else if !cfg.clientAuth.check(user, pass) {
+		} else if !g.clientAuth.check(user, pass) {
 			log.Warna("Failed basic auth with `user` and `password` from `client`",
 				user,
 				pass,
@@ -435,7 +433,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 		} else {
 			log.Tracea("Authorized `client`", rq.RemoteAddr)
 		}
-		if cfg.singleClient == "" {
+		if g.singleClient == "" {
 			h, _, err := net.SplitHostPort(rq.RemoteAddr)
 			if err != nil {
 				log.Errore(err)
@@ -443,7 +441,7 @@ func auth(h http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 			log.Infoa("Locked to single `client address`", h)
-			cfg.singleClient = h
+			g.singleClient = h
 		}
 		h(wr, rq)
 	}

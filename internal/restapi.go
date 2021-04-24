@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"io"
@@ -11,25 +11,25 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func apiRoutes(r *mux.Router) {
-	r.HandleFunc("/keyboard/type", auth(handleKeyboardType)).
+func (g *Gamcro) apiRoutes(r *mux.Router) {
+	r.HandleFunc("/keyboard/type", g.auth(g.handleKeyboardType)).
 		Methods(http.MethodPost).
 		HeadersRegexp("Content-Type", "text/plain")
-	r.HandleFunc("/clip", auth(handleClipStr)).
+	r.HandleFunc("/clip", g.auth(g.handleClipStr)).
 		Methods(http.MethodPost).
 		HeadersRegexp("Content-Type", "text/plain")
 }
 
-func rqBodyRd(wr http.ResponseWriter, rq *http.Request) io.ReadCloser {
+func (g *Gamcro) rqBodyRd(wr http.ResponseWriter, rq *http.Request) io.ReadCloser {
 	var rd io.ReadCloser = rq.Body
-	if cfg.txtLimit > 0 {
-		rd = http.MaxBytesReader(wr, rq.Body, int64(cfg.txtLimit))
+	if g.TxtLimit > 0 {
+		rd = http.MaxBytesReader(wr, rq.Body, int64(g.TxtLimit))
 	}
 	return rd
 }
 
-func rqBody(wr http.ResponseWriter, rq *http.Request) ([]byte, error) {
-	rd := rqBodyRd(wr, rq)
+func (g *Gamcro) rqBody(wr http.ResponseWriter, rq *http.Request) ([]byte, error) {
+	rd := g.rqBodyRd(wr, rq)
 	defer rd.Close()
 	return io.ReadAll(rd)
 }
@@ -49,8 +49,8 @@ func cleanText(s string) string {
 	return filterStr(s, unicode.IsGraphic)
 }
 
-func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
-	body, err := rqBody(wr, rq)
+func (g *Gamcro) handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
+	body, err := g.rqBody(wr, rq)
 	if err != nil {
 		log.Errora("Read body failed with `err`", err)
 		http.Error(wr, "internal server error", http.StatusInternalServerError)
@@ -64,8 +64,8 @@ func handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 	robotgo.TypeStr(txt)
 }
 
-func handleClipStr(wr http.ResponseWriter, rq *http.Request) {
-	body, err := rqBody(wr, rq)
+func (g *Gamcro) handleClipStr(wr http.ResponseWriter, rq *http.Request) {
+	body, err := g.rqBody(wr, rq)
 	if err == nil && len(body) > 0 {
 		s := cleanText(string(body))
 		log.Infoa("clip `text`", s)
