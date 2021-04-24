@@ -1,7 +1,9 @@
+*~
 *.backup
 *.debug
 *.exe
 *.pem
 /gamcro
 /proto
+/README.html
 
