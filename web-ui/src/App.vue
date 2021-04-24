@@ -85,14 +85,13 @@ export default {
                 let msgs = JSON.parse(localStorage.msgs);
                 if (msgs.length == 0) {
                     this.msgs = [{key: this.msgseq, text: ""}];
-                }
-                if (typeof msgs[0] == 'string' || msgs[0] instanceof String) {
+                } else if (typeof msgs[0] == 'string' || msgs[0] instanceof String) {
                     for (let i in msgs) {
                         this.msgs.push({key: i, text: msgs[i]});
                     }
                 } else {
                     for (let i in msgs) {
-                        this.msgs[i].key = i;
+                        msgs[i].key = i;
                     }
                     this.msgs = msgs;
                 }
