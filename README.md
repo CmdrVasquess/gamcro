@@ -181,16 +181,13 @@ network routing.
 
 For the Gamcro use case I'd prefer to have HTTP encryption without
 certificates. As mentioned above, Gamcro users have access to the
-client and the server machine at the same time. It would be easy for
-the user to compare a nonce, e.g. as part of the basic auth realm, in
-the browser with the same value in the Gamcro window. But as of my
-recent reading, [RFC4279](https://tools.ietf.org/html/rfc4279) and
+client and the server machine at the same time. It would be easy to
+work with a shared secret to setup encryption. But as of my recent
+reading, [RFC4279](https://tools.ietf.org/html/rfc4279) and
 [RFC5054](https://tools.ietf.org/html/rfc5054) are not widely
-supported by browsers (needs further investigation). RSP (RFC5054),
-which is considered superior to PSK-TLS (RFC4279), was [removed from
-TLS
-1.3](https://www.gnutls.org/manual/html_node/Authentication-using-SRP.html). For
-good or bad, I cannot yet tell.
+supported by browsers. RSP (RFC5054), which is considered superior to
+PSK-TLS (RFC4279), was [removed from TLS
+1.3](https://www.gnutls.org/manual/html_node/Authentication-using-SRP.html).
 
 **Gamcro Server Identity with Random Realm**
 
@@ -224,8 +221,9 @@ significant drawbacks.
 - Certificate-less TLS with proper encryption could be a good solution
   when considering the risks coming with self-signed certificates.
 
-- Certificate-less TLS seems not to be viable. Will we get it in the
-  future? What are the caveats? Why was RSP removed from TLS 1.3?
+- Certificate-less TLS seems not to be viable. The Gamcro use case,
+  where one user controls both ends of the communication channel, is
+  not the typical use case of web technology.
   
 - A way is needed to make the private key of the certificate
   accessible only to Gamcro.

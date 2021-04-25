@@ -11,8 +11,8 @@ import (
 )
 
 func TestAuthCreds(t *testing.T) {
-	var ac authCreds
-	if err := ac.set("foo", "bar"); err != nil {
+	var ac AuthCreds
+	if err := ac.Set("foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
 	if ac.check("foo", "baz") {
@@ -24,15 +24,15 @@ func TestAuthCreds(t *testing.T) {
 }
 
 func TestAuthCreds_file(t *testing.T) {
-	var ac1 authCreds
-	if err := ac1.set("foo", "bar"); err != nil {
+	var ac1 AuthCreds
+	if err := ac1.Set("foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
-	if err := ac1.writeFile(t.Name()); err != nil {
+	if err := ac1.WriteFile(t.Name()); err != nil {
 		t.Fatal(err)
 	}
-	var ac2 authCreds
-	if err := ac2.readFile(t.Name()); err != nil {
+	var ac2 AuthCreds
+	if err := ac2.ReadFile(t.Name()); err != nil {
 		t.Fatal(err)
 	}
 	if ac1.user != ac2.user {
@@ -53,7 +53,7 @@ func TestAuth(t *testing.T) {
 		LogCfg.SetOutput(io.Discard)
 	}
 	var gamcro Gamcro
-	gamcro.clientAuth.set("test", "test")
+	gamcro.ClientAuth.Set("test", "test")
 	hdlr := gamcro.auth(func(wr http.ResponseWriter, rq *http.Request) {
 		wr.WriteHeader(http.StatusOK)
 	})
