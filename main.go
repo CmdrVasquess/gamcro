@@ -50,6 +50,7 @@ func main() {
 	fLog := flag.String("log", "", c4hgol.LevelCfgDoc(nil))
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, *fLog, nil)
+	gamcro.Passphr = readPassphrase()
 	if err := ensureCreds(*authFlag, &gamcro.ClientAuth); err != nil {
 		log.Fatale(err)
 	}
@@ -102,6 +103,16 @@ func ensureCreds(flag string, cauth *internal.AuthCreds) (err error) {
 	// 	log.Infof("Using one-time password \"%s\"", passwd)
 	// 	cfg.clientAuth.set(flag[:len(flag)-1], passwd)
 	// }
+}
+
+func readPassphrase() []byte {
+	fmt.Print("Enter passphrase (empty skips security): ")
+	res, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Fatale(err)
+	}
+	fmt.Println()
+	return res
 }
 
 func userInputCreds(paths ospath.AppPaths, cauth *internal.AuthCreds) (err error) {

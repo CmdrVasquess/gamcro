@@ -1,11 +1,15 @@
 package internal
 
 import (
+	"bytes"
+	"crypto/tls"
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
 
 	"git.fractalqb.de/fractalqb/qbsllm"
 	"github.com/gorilla/mux"
@@ -50,13 +54,13 @@ func (g *Gamcro) Run(qrFlag bool) error {
 		))
 	}
 	g.apiRoutes(webRoutes)
-	if err := ensureTLSCert(g.TLSCert, g.TLSKey); err != nil {
+	if err := ensureTLSCert(g.TLSCert, g.TLSKey, g.Passphr); err != nil {
 		return err
 	}
 	log.Debuga("Load TLS `certificate`", g.TLSCert)
 	log.Debuga("Load TLS `key`", g.TLSKey)
 	log.Debugf("Runninig gamcro HTTPS server on %s", g.SrvAddr)
-	return http.ListenAndServeTLS(g.SrvAddr, g.TLSCert, g.TLSKey, webRoutes)
+	return g.listenAndServeTLS(webRoutes)
 }
 
 func handleUI(wr http.ResponseWriter, rq *http.Request) {
@@ -85,4 +89,44 @@ func (g *Gamcro) ConnectHint() string {
 		svcurl = fmt.Sprintf("https://%s%s/", addr.IP, g.SrvAddr)
 	}
 	return svcurl
+}
+
+// Inspred by https://gist.github.com/tjamet/c9a53127c9bec54f62ed94685de85875
+func (g *Gamcro) listenAndServeTLS(handler http.Handler) error {
+	certPEMBlock, err := os.ReadFile(g.TLSCert)
+	if err != nil {
+		return err
+	}
+	var keyPEMBlock []byte
+	err = cryptReadFile(g.TLSKey, g.Passphr, func(rd io.Reader) error {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, rd); err != nil {
+			return err
+		}
+		keyPEMBlock = buf.Bytes()
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
+	if err != nil {
+		return err
+	}
+	addr := g.SrvAddr
+	if addr == "" {
+		addr = ":https"
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	server := &http.Server{
+		Addr:    addr,
+		Handler: handler,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
+	}
+	return server.ServeTLS(ln, "", "")
 }

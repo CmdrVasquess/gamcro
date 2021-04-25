@@ -32,7 +32,7 @@ func init() {
 	localNets = newLocalNetList()
 }
 
-func newTLSCert(cert, key, commonName string) (err error) {
+func newTLSCert(cert, key, commonName string, passphrase []byte) (err error) {
 	log.Infoa("Create self signed `certificate` with `key` as `common name`",
 		cert,
 		key,
@@ -89,33 +89,34 @@ func newTLSCert(cert, key, commonName string) (err error) {
 	if _, err = ospath.ProvideDir(NewDirPerm, key); err != nil {
 		return fmt.Errorf("create key-file '%s': %s", key, err)
 	}
-	wr, err = os.OpenFile(key, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	err = cryptWriteFile(key, passphrase, func(wr io.Writer) error {
+		return pem.Encode(wr, block)
+	})
 	if err != nil {
-		return fmt.Errorf("create key-file '%s': %s", key, err)
+		fmt.Errorf("write key-file '%s': %s", key, err)
 	}
-	defer wr.Close()
-	err = pem.Encode(wr, block)
-	if err != nil {
-		return fmt.Errorf("write key-file '%s': %s", key, err)
-	}
-	err = wr.Close()
-	if err != nil {
-		return fmt.Errorf("close key-file '%s': %s", key, err)
-	}
-
-	return nil
+	return err
 }
 
-func ensureTLSCert(cert, key string) error {
+func ensureTLSCert(cert, key string, passpharse []byte) error {
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
 	if !os.IsNotExist(certErr) || !os.IsNotExist(keyErr) {
 		return nil
 	}
-	return newTLSCert(cert, key, "JV:Gamcro")
+	return newTLSCert(cert, key, "JV:Gamcro", passpharse)
 }
 
 const DefaultCredsFile = "auth.txt"
+
+func cryptWriteFile(name string, passwd []byte, do func(io.Writer) error) error {
+	wr, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer wr.Close()
+	return cryptWrite(wr, passwd, do)
+}
 
 func cryptWrite(wr io.Writer, passwd []byte, do func(io.Writer) error) error {
 	if len(passwd) == 0 {
@@ -132,6 +133,15 @@ func cryptWrite(wr io.Writer, passwd []byte, do func(io.Writer) error) error {
 	}
 	defer ewr.Close()
 	return do(ewr)
+}
+
+func cryptReadFile(name string, passwd []byte, do func(io.Reader) error) error {
+	rd, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer rd.Close()
+	return cryptRead(rd, passwd, do)
 }
 
 func cryptRead(rd io.Reader, passwd []byte, do func(io.Reader) error) error {
