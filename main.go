@@ -19,7 +19,9 @@ import (
 )
 
 var (
-	gamcro internal.Gamcro
+	gamcro = internal.Gamcro{
+		RoboAPIs: internal.RoboType | internal.RoboClip,
+	}
 
 	paths = ospath.NewApp(ospath.ExeDir(), internal.AppName)
 	//go:embed banner.txt

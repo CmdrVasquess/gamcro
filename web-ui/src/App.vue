@@ -21,29 +21,38 @@
 <span class="menu" v-else @click="menu=true">≡</span>
 <transition name="menu">
   <aside v-if="menu" class="menu">
+    v{{version}}
     <div>↴ Import</div>
-    <div>Export ↱</div>
+    <div @click="menu=false;modal='export'">Export ↱</div>
   </aside>
 </transition>
+<Modal id="export" v-if="modal=='export'">
+  <h1>Export texts</h1>
+  <textarea></textarea>
+</Modal>
 </template>
 
 <script>
 import QuickText from './components/QuickText.vue'
 import Message from './components/Message.vue'
+import Modal from './components/Modal.vue'
 
 export default {
     name: 'App',
     components: {
         QuickText,
-        Message
+        Message,
+        Modal
     },
     data() {
         return {
+            version: process.env.VUE_APP_VERSION,
             status: "",
             msgs: [],
             menu: false,
             imexpdlg: false,
-            msgseq: 0
+            msgseq: 0,
+            modal: ""
         }
     },
     methods: {
@@ -83,23 +92,26 @@ export default {
         if (localStorage.msgs) {
             try {
                 let msgs = JSON.parse(localStorage.msgs);
-                if (msgs.length == 0) {
-                    this.msgs = [{key: this.msgseq, text: ""}];
-                } else if (typeof msgs[0] == 'string' || msgs[0] instanceof String) {
-                    for (let i in msgs) {
-                        this.msgs.push({key: i, text: msgs[i]});
+                if (msgs.length > 0) {
+                    if (typeof msgs[0] == 'string' || msgs[0] instanceof String) {
+                        for (let i in msgs) {
+                            this.msgs.push({key: i, text: msgs[i]});
+                        }
+                    } else {
+                        for (let i in msgs) {
+                            msgs[i].key = i;
+                        }
+                        this.msgs = msgs;
                     }
-                } else {
-                    for (let i in msgs) {
-                        msgs[i].key = i;
-                    }
-                    this.msgs = msgs;
+                    this.msgseq = this.msgs.length;
                 }
-                this.msgseq = this.msgs.length;
             } catch(x) {
                 console.log("load msgs from local storage: ", x);
-                this.msgs = [{key: this.msgseq, text: ""}];
             }
+        }
+        if (this.msgs.length == 0) {
+            this.msgs = [{key: this.msgseq, text: ""}];
+            this.msgseq = 0;
         }
     },
     watch: {
@@ -190,7 +202,7 @@ aside.menu {
     right: 0; top: 0;
     z-index: 2;
     padding: .5em 1.5em;
-    padding-top: 3em;
+    padding-top: 1em;
     height: 100vh;
     background-color: black;
     box-shadow: 0 0 .4em 1px black;
@@ -202,13 +214,15 @@ aside.menu {
 .menu-leave-active {
     transition: all 0.3s ease;
 }
-
 .menu-enter-from,
 .menu-leave-to {
     transform: translateX(40px);
     opacity: 0;
 }
-aside { color: var(--colBBkg); }
+aside {
+    color: var(--colBBkg);
+    text-align: left;
+}
 aside > div {
     font-weight: bold;
     padding: .3em .7em;
@@ -259,5 +273,11 @@ main { max-width: 60em; margin: auto; }
 }
 .msgs-leave-active {
     height: 0;
+}
+#export div.modal-box {
+    width: 80%;
+}
+#export > div.modal-box > textarea {
+    width: 98%;
 }
 </style>

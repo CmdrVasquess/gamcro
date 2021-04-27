@@ -37,6 +37,7 @@ type Gamcro struct {
 	MultiClient     bool
 	ClientNet       string
 	TxtLimit        int
+	RoboAPIs        RoboAPI
 }
 
 func (g *Gamcro) Run(qrFlag bool) error {

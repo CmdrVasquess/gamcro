@@ -247,6 +247,7 @@ type AuthCreds struct {
 	user string
 	salt []byte
 	pass []byte
+	ctpw string
 }
 
 const (
@@ -263,6 +264,7 @@ func (ac *AuthCreds) Set(user, passwd string) (err error) {
 	}
 	ac.user = user
 	ac.pass = pbkdf2.Key([]byte(passwd), ac.salt, authIter, authKeyLen, sha256.New)
+	ac.ctpw = ""
 	return nil
 }
 
@@ -270,11 +272,18 @@ func (ac *AuthCreds) check(user, passwd string) bool {
 	if ac.user != user {
 		return false
 	}
+	if ac.ctpw != "" {
+		return passwd == ac.ctpw
+	}
 	if len(ac.salt) == 0 {
 		return string(ac.pass) == passwd
 	}
 	h := pbkdf2.Key([]byte(passwd), ac.salt, authIter, authKeyLen, sha256.New)
-	return subtle.ConstantTimeCompare(h, ac.pass) == 1
+	res := subtle.ConstantTimeCompare(h, ac.pass) == 1
+	if res {
+		ac.ctpw = passwd
+	}
+	return res
 }
 
 func (ac *AuthCreds) WriteFile(name string) error {
@@ -307,6 +316,7 @@ func (ac *AuthCreds) WriteFile(name string) error {
 
 func (ac *AuthCreds) ReadFile(name string) error {
 	log.Debuga("Read HTTP basic auth user:password from `file`", name)
+	ac.ctpw = ""
 	rd, err := os.Open(name)
 	if err != nil {
 		return err
@@ -339,7 +349,6 @@ func (ac *AuthCreds) ReadFile(name string) error {
 	}
 	ac.pass, err = base64.StdEncoding.DecodeString(scan.Text())
 	return err
-	return err
 }
 
 var (
@@ -359,9 +368,8 @@ func (g *Gamcro) auth(h http.HandlerFunc) http.HandlerFunc {
 			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
 			return
 		} else if !g.ClientAuth.check(user, pass) {
-			log.Warna("Failed basic auth with `user` and `password` from `client`",
+			log.Warna("Failed basic auth for `user` from `client`",
 				user,
-				pass,
 				rq.RemoteAddr)
 			s := time.Duration(1000 + mrand.Intn(2000))
 			time.Sleep(s * time.Millisecond)

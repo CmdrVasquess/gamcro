@@ -21,6 +21,13 @@ func TestAuthCreds(t *testing.T) {
 	if !ac.check("foo", "bar") {
 		t.Error("Rejected correct password 'bar'")
 	}
+	// twice because of state change with cached clear-text password (ctpw)
+	if ac.check("foo", "baz") {
+		t.Error("Accepted wrong password 'baz'")
+	}
+	if !ac.check("foo", "bar") {
+		t.Error("Rejected correct password 'bar'")
+	}
 }
 
 func TestAuthCreds_file(t *testing.T) {
