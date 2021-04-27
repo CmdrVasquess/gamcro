@@ -122,7 +122,7 @@ func cryptWrite(wr io.Writer, passwd []byte, do func(io.Writer) error) error {
 	if len(passwd) == 0 {
 		return do(wr)
 	}
-	awr, err := armor.Encode(wr, "MESSAGE", nil)
+	awr, err := armor.Encode(wr, "PGP MESSAGE", nil)
 	if err != nil {
 		return err
 	}

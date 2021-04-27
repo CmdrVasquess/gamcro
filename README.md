@@ -15,11 +15,17 @@ Now, you have been warned and Gamcro comes with some security
 mechanisms. See section about Security. However, keep the following
 advise in mind:
 
-1. Be careful when using Gamcro with games where one can perform
+1. Enter a passphrase to make sure that the TLS certificate's private key
+   file is encrypted.
+
+2. Let Gamcro write the `auth.txt` file. Then the password is stored as a
+   salted hash.
+
+3. Be careful when using Gamcro with games where one can perform
    security-sensitive actions, e.g. µ-Transactions, from within the
    game.
 
-2. Run Gamcro only as long as you need it and keep the game you play
+4. Run Gamcro only as long as you need it and keep the game you play
    in the foreground.
 
 ## Using Gamcro

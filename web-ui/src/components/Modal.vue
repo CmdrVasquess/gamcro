@@ -25,6 +25,6 @@ export default {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     padding: 1em;
-    background-color: gray;
+    background-color: var(--colBBkg);
 }
 </style>

@@ -22,14 +22,24 @@
 <transition name="menu">
   <aside v-if="menu" class="menu">
     v{{version}}
-    <div>↴ Import</div>
+    <div @click="menu=false;modal='import'">↴ Import</div>
     <div @click="menu=false;modal='export'">Export ↱</div>
   </aside>
 </transition>
-<Modal id="export" v-if="modal=='export'">
-  <h1>Export texts</h1>
-  <textarea></textarea>
-</Modal>
+<transition name="fade">
+  <Modal id="export" v-if="modal=='export'">
+    <h1>Export texts</h1>
+    <textarea cols="80" v-model="exportText" readonly></textarea>
+    <button @click="modal=''">Close</button>
+  </Modal>
+</transition>
+<transition name="fade">
+  <Modal id="export" v-if="modal=='import'">
+    <h1>Import texts</h1>
+    <textarea cols="80" v-model="impTexts"></textarea>
+    <button @click="modal='';importText()">Import</button>
+  </Modal>
+</transition>
 </template>
 
 <script>
@@ -52,7 +62,17 @@ export default {
             menu: false,
             imexpdlg: false,
             msgseq: 0,
-            modal: ""
+            modal: "",
+            impTexts: ""
+        }
+    },
+    computed: {
+        exportText() {
+            let txts = [];
+            for (let m of this.msgs) {
+                txts.push(m.text);
+            }
+            return JSON.stringify(txts, null, 2);
         }
     },
     methods: {
@@ -86,6 +106,19 @@ export default {
                     this.qtype = "";
                     this.qclip = "";
                 });
+        },
+        importText() {
+            try {
+                let txts = JSON.parse(this.impTexts);
+                let msgs = []
+                for (let i in txts) {
+                    msgs.push({key: i, text: txts[i]});
+                }
+                this.msgs = msgs;
+                this.msgseq = this.msgs.length;
+            } catch(x) {
+                console.log("import texts: ", x);
+            }
         }
     },
     mounted() {
@@ -227,6 +260,7 @@ aside > div {
     font-weight: bold;
     padding: .3em .7em;
     margin: .2em;
+    cursor: pointer;
 }
 aside > div:hover {
     color: var(--colFgr);
@@ -256,7 +290,7 @@ main { max-width: 60em; margin: auto; }
 .message { margin-top: 1em; }
 .fade-enter-active,
 .fade-leave-active {
-    transition: opacity 0.5s ease;
+    transition: opacity 0.4s ease;
 }
 .fade-enter-from,
 .fade-leave-to {
@@ -274,10 +308,11 @@ main { max-width: 60em; margin: auto; }
 .msgs-leave-active {
     height: 0;
 }
-#export div.modal-box {
-    width: 80%;
+div.modal-box h1 {
+    margin-top: 0;
+    font-size: 150%;
 }
-#export > div.modal-box > textarea {
-    width: 98%;
+div.modal-box textarea {
+    height: 60vh;
 }
 </style>
