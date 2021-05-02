@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -103,6 +104,47 @@ func TestAuth(t *testing.T) {
 		hdlr(rrec, rq)
 		if rrec.Code != http.StatusForbidden {
 			t.Errorf("expect 403 Forbidden, got: %s", rrec.Result().Status)
+		}
+	})
+}
+
+func TestCryptWriteRead(t *testing.T) {
+	const cleartext = "This is the clear text."
+	passwd := []byte("secret")
+	var buf bytes.Buffer
+	err := cryptWrite(&buf, passwd, []byte(cleartext))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Run("successful decrypt", func(t *testing.T) {
+		rd := bytes.NewReader(buf.Bytes())
+		dectxt, err := cryptRead(rd, passwd)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if dts := string(dectxt); dts != cleartext {
+			t.Errorf("wrong clear text: '%s'", dts)
+		}
+	})
+	t.Run("failing decrypt", func(t *testing.T) {
+		data := buf.Bytes()
+		data[len(data)/2]++
+		defer func() { data[len(data)/2]-- }()
+		rd := bytes.NewReader(data)
+		_, err := cryptRead(rd, passwd)
+		if err == nil {
+			t.Error("no decryption error")
+		} else if _, ok := err.(CryptError); !ok {
+			t.Errorf("unecpected decryption error type: %T", err)
+		}
+	})
+	t.Run("wrong password", func(t *testing.T) {
+		rd := bytes.NewReader(buf.Bytes())
+		_, err := cryptRead(rd, []byte("wrong"))
+		if err == nil {
+			t.Error("no decryption error")
+		} else if _, ok := err.(CryptError); !ok {
+			t.Errorf("unecpected decryption error type: %T", err)
 		}
 	})
 }

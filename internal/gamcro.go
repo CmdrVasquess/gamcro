@@ -1,11 +1,10 @@
 package internal
 
 import (
-	"bytes"
 	"crypto/tls"
 	"embed"
+	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"net"
 	"net/http"
@@ -37,7 +36,7 @@ type Gamcro struct {
 	MultiClient     bool
 	ClientNet       string
 	TxtLimit        int
-	RoboAPIs        RoboAPI
+	RoboAPIs        GamcroAPI
 }
 
 func (g *Gamcro) Run(qrFlag bool) error {
@@ -54,6 +53,9 @@ func (g *Gamcro) Run(qrFlag bool) error {
 			http.StripPrefix("/s/", staticHdlr).ServeHTTP,
 		))
 	}
+	webRoutes.HandleFunc("/config", g.auth(g.handleConfig)).
+		Methods(http.MethodGet)
+	webRoutes.HandleFunc("/client/release", g.auth(g.releaseClient))
 	g.apiRoutes(webRoutes)
 	if err := ensureTLSCert(g.TLSCert, g.TLSKey, g.Passphr); err != nil {
 		return err
@@ -98,17 +100,9 @@ func (g *Gamcro) listenAndServeTLS(handler http.Handler) error {
 	if err != nil {
 		return err
 	}
-	var keyPEMBlock []byte
-	err = cryptReadFile(g.TLSKey, g.Passphr, func(rd io.Reader) error {
-		var buf bytes.Buffer
-		if _, err := io.Copy(&buf, rd); err != nil {
-			return err
-		}
-		keyPEMBlock = buf.Bytes()
-		return nil
-	})
+	keyPEMBlock, err := cryptReadFile(g.TLSKey, g.Passphr)
 	if err != nil {
-		return err
+		return fmt.Errorf("read %s: %s", g.TLSKey, err)
 	}
 	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
 	if err != nil {
@@ -130,4 +124,23 @@ func (g *Gamcro) listenAndServeTLS(handler http.Handler) error {
 		},
 	}
 	return server.ServeTLS(ln, "", "")
+}
+
+func (g *Gamcro) handleConfig(wr http.ResponseWriter, rq *http.Request) {
+	cfg := struct {
+		Version     string
+		APIs        []string
+		MultiClient bool
+	}{
+		Version:     fmt.Sprintf("%d.%d.%d", Major, Minor, Patch),
+		MultiClient: g.MultiClient,
+	}
+	for i := GamcroAPI(1); i < GamcroAPI_end; i <<= 1 {
+		if g.RoboAPIs.Active(i) {
+			cfg.APIs = append(cfg.APIs, i.String())
+		}
+	}
+	wr.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(wr)
+	enc.Encode(&cfg)
 }

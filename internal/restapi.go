@@ -12,16 +12,55 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type RoboAPI uint32
+type GamcroAPI uint32
 
+//go:generate stringer -type GamcroAPI
 const (
-	RoboType RoboAPI = (1 << iota)
-	RoboTap
-	RoboClip
+	TypeAPI GamcroAPI = (1 << iota)
+	TapAPI
+	ClipPostAPI
+	ClipGetAPI
+
+	GamcroAPI_end
 )
 
-func (r RoboAPI) Active(a RoboAPI) bool {
+func (r GamcroAPI) Active(a GamcroAPI) bool {
 	return (r & a) == a
+}
+
+func (set GamcroAPI) FlagString() string {
+	var sb strings.Builder
+	for i := GamcroAPI(1); i < GamcroAPI_end; i <<= 1 {
+		if set.Active(i) {
+			if sb.Len() > 0 {
+				sb.WriteByte(',')
+			}
+			sb.WriteString(i.String())
+		}
+	}
+	return sb.String()
+}
+
+func ParseRoboAPISet(flag string) (set GamcroAPI) {
+	apis := strings.Split(flag, ",")
+	for i := GamcroAPI(1); i < GamcroAPI_end; i <<= 1 {
+		inm := i.String()
+		for _, api := range apis {
+			if api == inm {
+				set |= i
+			}
+		}
+	}
+	return set
+}
+
+func (g *Gamcro) mayRobo(api GamcroAPI, wr http.ResponseWriter) bool {
+	res := g.RoboAPIs.Active(api)
+	if !res {
+		log.Warna("blocked `robo api`", api.String())
+		wr.WriteHeader(http.StatusForbidden)
+	}
+	return res
 }
 
 func (g *Gamcro) apiRoutes(r *mux.Router) {
@@ -30,9 +69,11 @@ func (g *Gamcro) apiRoutes(r *mux.Router) {
 		HeadersRegexp("Content-Type", "text/plain")
 	r.HandleFunc("/keyboard/tap/{key}", g.auth(g.handleKeyboardTap)).
 		Methods(http.MethodPost)
-	r.HandleFunc("/clip", g.auth(g.handleClipStr)).
+	r.HandleFunc("/clip", g.auth(g.handleClipPost)).
 		Methods(http.MethodPost).
 		HeadersRegexp("Content-Type", "text/plain")
+	r.HandleFunc("/clip", g.auth(g.handleClipGet)).
+		Methods(http.MethodGet)
 }
 
 func (g *Gamcro) rqBodyRd(wr http.ResponseWriter, rq *http.Request) io.ReadCloser {
@@ -71,8 +112,7 @@ func validQuery(rq *http.Request, r validation.MapRule) (map[string][]string, er
 }
 
 func (g *Gamcro) handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
-	if !g.RoboAPIs.Active(RoboType) {
-		wr.WriteHeader(http.StatusForbidden)
+	if !g.mayRobo(TypeAPI, wr) {
 		return
 	}
 	body, err := g.rqBody(wr, rq)
@@ -94,8 +134,7 @@ var validKbdTapQuery = validation.Map(
 )
 
 func (g *Gamcro) handleKeyboardTap(wr http.ResponseWriter, rq *http.Request) {
-	if !g.RoboAPIs.Active(RoboTap) {
-		wr.WriteHeader(http.StatusForbidden)
+	if !g.mayRobo(TapAPI, wr) {
 		return
 	}
 	key := mux.Vars(rq)["key"]
@@ -119,9 +158,8 @@ func (g *Gamcro) handleKeyboardTap(wr http.ResponseWriter, rq *http.Request) {
 	wr.WriteHeader(http.StatusNoContent)
 }
 
-func (g *Gamcro) handleClipStr(wr http.ResponseWriter, rq *http.Request) {
-	if !g.RoboAPIs.Active(RoboClip) {
-		wr.WriteHeader(http.StatusForbidden)
+func (g *Gamcro) handleClipPost(wr http.ResponseWriter, rq *http.Request) {
+	if !g.mayRobo(ClipPostAPI, wr) {
 		return
 	}
 	body, err := g.rqBody(wr, rq)
@@ -132,7 +170,7 @@ func (g *Gamcro) handleClipStr(wr http.ResponseWriter, rq *http.Request) {
 	}
 	if len(body) > 0 {
 		txt := cleanText(string(body))
-		log.Infoa("clip `text`", txt)
+		log.Infoa("clip `text` to board", txt)
 		if err = clipboard.WriteAll(txt); err != nil {
 			log.Errore(err)
 			http.Error(wr, "internal server error", http.StatusInternalServerError)
@@ -140,4 +178,19 @@ func (g *Gamcro) handleClipStr(wr http.ResponseWriter, rq *http.Request) {
 		}
 	}
 	wr.WriteHeader(http.StatusNoContent)
+}
+
+func (g *Gamcro) handleClipGet(wr http.ResponseWriter, rq *http.Request) {
+	if !g.mayRobo(ClipGetAPI, wr) {
+		return
+	}
+	txt, err := clipboard.ReadAll()
+	if err != nil {
+		log.Errore(err)
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	log.Infoa("clip `text` from board", txt)
+	wr.Header().Set("Content-Type", "text/plain")
+	io.WriteString(wr, txt)
 }

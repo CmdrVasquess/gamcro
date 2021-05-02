@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	_ "embed"
 	"flag"
 	"fmt"
@@ -20,13 +21,13 @@ import (
 
 var (
 	gamcro = internal.Gamcro{
-		RoboAPIs: internal.RoboType | internal.RoboClip,
+		RoboAPIs: internal.TypeAPI | internal.ClipPostAPI,
 	}
 
 	paths = ospath.NewApp(ospath.ExeDir(), internal.AppName)
 	//go:embed banner.txt
 	banner []byte
-	log    = qbsllm.New(qbsllm.Lnormal, "tgamcro", nil, nil)
+	log    = qbsllm.New(qbsllm.Lnormal, internal.AppName, nil, nil)
 	logCfg = c4hgol.Config(qbsllm.NewConfig(log), internal.LogCfg)
 )
 
@@ -48,11 +49,15 @@ func main() {
 	flag.IntVar(&gamcro.TxtLimit, "text-limit", 256, docTxtLimitFlag)
 	flag.BoolVar(&gamcro.MultiClient, "multi-client", false, docMCltFlag)
 	flag.StringVar(&gamcro.ClientNet, "clients", "local", docClientsFlag)
+	fApis := flag.String("apis", gamcro.RoboAPIs.FlagString(), docAPIsFlag())
+	noPass := flag.Bool("no-passphrase", false, docNoPassFlags)
 	fQR := flag.Bool("qr", false, docQRFlag)
 	fLog := flag.String("log", "", c4hgol.LevelCfgDoc(nil))
 	flag.Parse()
 	c4hgol.SetLevel(logCfg, *fLog, nil)
-	gamcro.Passphr = readPassphrase()
+	if !*noPass {
+		gamcro.Passphr = readPassphrase(false)
+	}
 	if err := ensureCreds(*authFlag, &gamcro.ClientAuth); err != nil {
 		log.Fatale(err)
 	}
@@ -68,6 +73,7 @@ func main() {
 			}
 		}
 	}
+	gamcro.RoboAPIs = internal.ParseRoboAPISet(*fApis)
 	log.Infof("Authenticate to realm \"Gamcro: %s\"", internal.CurrentRealmKey)
 	log.Fatale(gamcro.Run(*fQR))
 }
@@ -107,14 +113,42 @@ func ensureCreds(flag string, cauth *internal.AuthCreds) (err error) {
 	// }
 }
 
-func readPassphrase() []byte {
-	fmt.Print("Enter passphrase (empty skips security): ")
-	res, err := term.ReadPassword(int(os.Stdin.Fd()))
-	if err != nil {
-		log.Fatale(err)
+func readPassword(prompt, prompt2 string, allowEmpty bool) (res []byte) {
+	for {
+		fmt.Print(prompt)
+		var err error
+		res, err = term.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			log.Fatale(err)
+		}
+		fmt.Println()
+		if (allowEmpty && len(res) == 0) || prompt2 == "" {
+			break
+		}
+		fmt.Print(prompt2)
+		res2, err := term.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			log.Fatale(err)
+		}
+		fmt.Println()
+		if reflect.DeepEqual(res, res2) {
+			break
+		}
+		fmt.Println("Mismatch detected, please try again")
 	}
-	fmt.Println()
 	return res
+}
+
+func readPassphrase(twice bool) []byte {
+	var prompt2 string
+	if twice {
+		prompt2 = "Repeat passphrase: "
+	}
+	return readPassword(
+		"Enter passphrase (empty skips security): ",
+		prompt2,
+		true,
+	)
 }
 
 func userInputCreds(paths ospath.AppPaths, cauth *internal.AuthCreds) (err error) {
@@ -124,30 +158,18 @@ func userInputCreds(paths ospath.AppPaths, cauth *internal.AuthCreds) (err error
 	if _, err = fmt.Scan(&usr); err != nil {
 		return err
 	}
-	var pass1 []byte
-	for {
-		fmt.Print("Enter HTTP basic auth password: ")
-		pass1, err = term.ReadPassword(int(os.Stdin.Fd()))
-		if err != nil {
-			return err
-		}
-		fmt.Print("\nRepeat password: ")
-		pass2, err := term.ReadPassword(int(os.Stdin.Fd()))
-		if err != nil {
-			return err
-		}
-		if reflect.DeepEqual(pass1, pass2) {
-			break
-		}
-		fmt.Println()
-		log.Infos("Passwords missmatch")
-	}
+	pass1 := readPassword(
+		"Enter HTTP basic auth password: ",
+		"Repeat password: ",
+		false,
+	)
 	cauth.Set(usr, string(pass1))
 	authFile := paths.LocalData(internal.DefaultCredsFile)
-	fmt.Printf("\nSave user:password to '%s' (y/N)?", authFile)
+	fmt.Printf("Save user:password to '%s' (y/N)? ", authFile)
 	var answer string
-	if _, err = fmt.Scan(&answer); err != nil {
-		return err
+	scn := bufio.NewScanner(os.Stdin)
+	if scn.Scan() {
+		answer = scn.Text()
 	}
 	if l := strings.ToLower(answer); l == "y" || l == "yes" {
 		if _, err := ospath.ProvideDir(internal.NewDirPerm, authFile); err != nil {
@@ -156,7 +178,6 @@ func userInputCreds(paths ospath.AppPaths, cauth *internal.AuthCreds) (err error
 		err = cauth.WriteFile(authFile)
 		return err
 	}
-	fmt.Println()
 	return nil
 }
 
@@ -204,4 +225,20 @@ credentials. The current settings are determined like this:
 clients from the local network will be accepted.`
 
 	docQRFlag = `Show connect URL as QR code`
+
+	docNoPassFlags = `Skip the question to enter a passphrase. Note that this bypasses
+the security for the generated X.509 priavte key. Using this option
+may be useful to avoid interactive input. But it is not recommended
+for normal use. Having a browser that accepts a certificate that can
+be used by any dubious program on your machine is a serious risk.`
 )
+
+func docAPIsFlag() string {
+	var sb strings.Builder
+	sb.WriteString("Selet the API operations that are offered by Gamcro. The APIs are:")
+	for i := internal.GamcroAPI(1); i < internal.GamcroAPI_end; i <<= 1 {
+		fmt.Fprintf(&sb, "\n - %s", i.String())
+	}
+	fmt.Fprintln(&sb)
+	return sb.String()
+}

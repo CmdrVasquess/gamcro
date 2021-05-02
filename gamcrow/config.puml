@@ -1,0 +1,39 @@
+@startsalt config
+{+
+{/ <b>Config | APIs | Running}
+{
+    Web User:       | "Username     "
+    Web Password:   | "***          "
+    Server Address: | ":9420        "
+    Text Limit:     | "250          "
+    Clients:        | ^Local      ^
+    [ ] Multi-Client
+    
+}
+[Start]
+}
+@endsalt
+@startsalt apis
+{+
+{/ Config | <b>APIs | Running}
+{
+    [X] RoboType
+    [ ] RoboTap
+    [X] RoboClipPost
+    [ ] RoboClipGet
+}
+[Start]
+}
+@endsalt
+@startsalt running
+{+
+{/ Config | APIs | <b>Running}
+{
+    https://192.168.0.2:9420/
+    --
+    QR-Code
+}
+{ Client: | 192.168.0.3 }
+[Disconnect]
+}
+@endsalt

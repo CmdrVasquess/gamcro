@@ -2,6 +2,9 @@ package internal
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -23,8 +26,6 @@ import (
 
 	"git.fractalqb.de/fractalqb/pack/ospath"
 	"github.com/gofrs/uuid"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -89,9 +90,7 @@ func newTLSCert(cert, key, commonName string, passphrase []byte) (err error) {
 	if _, err = ospath.ProvideDir(NewDirPerm, key); err != nil {
 		return fmt.Errorf("create key-file '%s': %s", key, err)
 	}
-	err = cryptWriteFile(key, passphrase, func(wr io.Writer) error {
-		return pem.Encode(wr, block)
-	})
+	err = cryptWriteFile(key, passphrase, pem.EncodeToMemory(block))
 	if err != nil {
 		fmt.Errorf("write key-file '%s': %s", key, err)
 	}
@@ -109,60 +108,104 @@ func ensureTLSCert(cert, key string, passpharse []byte) error {
 
 const DefaultCredsFile = "auth.txt"
 
-func cryptWriteFile(name string, passwd []byte, do func(io.Writer) error) error {
+type CryptError struct {
+	op  string
+	err error
+}
+
+func (ce CryptError) Error() string {
+	return fmt.Sprintf("crypt %s error: %s", ce.op, ce.err)
+}
+
+func cryptWriteFile(name string, passwd, data []byte) error {
 	wr, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
 	defer wr.Close()
-	return cryptWrite(wr, passwd, do)
+	return cryptWrite(wr, passwd, data)
 }
 
-func cryptWrite(wr io.Writer, passwd []byte, do func(io.Writer) error) error {
+const cryptKeySaltSize = 32
+
+func cryptWrite(wr io.Writer, passwd, data []byte) error {
 	if len(passwd) == 0 {
-		return do(wr)
-	}
-	awr, err := armor.Encode(wr, "PGP MESSAGE", nil)
-	if err != nil {
+		_, err := wr.Write(data)
 		return err
 	}
-	defer awr.Close()
-	ewr, err := openpgp.SymmetricallyEncrypt(awr, passwd, nil, nil)
-	if err != nil {
-		return err
+	salt := make([]byte, cryptKeySaltSize)
+	if _, err := rand.Read(salt); err != nil {
+		return CryptError{"write", err}
 	}
-	defer ewr.Close()
-	return do(ewr)
+	key := pbkdf2.Key([]byte(passwd), salt, authIter, 32, sha256.New)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return CryptError{"write", err}
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return CryptError{"write", err}
+	}
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return CryptError{"write", err}
+	}
+	ciph := aesgcm.Seal(nil, nonce, data, nil)
+	if _, err = wr.Write(salt); err != nil {
+		return CryptError{"write", err}
+	}
+	if _, err = wr.Write(nonce); err != nil {
+		return CryptError{"write", err}
+	}
+	if _, err = wr.Write(ciph); err != nil {
+		return CryptError{"write", err}
+	}
+	return nil
 }
 
-func cryptReadFile(name string, passwd []byte, do func(io.Reader) error) error {
+func cryptReadFile(name string, passwd []byte) ([]byte, error) {
 	rd, err := os.Open(name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rd.Close()
-	return cryptRead(rd, passwd, do)
+	return cryptRead(rd, passwd)
 }
 
-func cryptRead(rd io.Reader, passwd []byte, do func(io.Reader) error) error {
+func cryptRead(rd io.Reader, passwd []byte) ([]byte, error) {
 	if len(passwd) == 0 {
-		return do(rd)
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, rd); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
 	}
-	ard, err := armor.Decode(rd)
+	var salt bytes.Buffer
+	if _, err := io.CopyN(&salt, rd, cryptKeySaltSize); err != nil {
+		return nil, CryptError{"read", err}
+	}
+	key := pbkdf2.Key([]byte(passwd), salt.Bytes(), authIter, 32, sha256.New)
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return err
+		return nil, CryptError{"read", err}
 	}
-	md, err := openpgp.ReadMessage(ard.Body,
-		nil,
-		func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
-			return passwd, nil
-		},
-		nil,
-	)
+	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return err
+		return nil, CryptError{"read", err}
 	}
-	return do(md.UnverifiedBody)
+	var nonce bytes.Buffer
+	if _, err := io.CopyN(&nonce, rd, int64(aesgcm.NonceSize())); err != nil {
+		return nil, CryptError{"read", err}
+	}
+	var ciph bytes.Buffer
+	if _, err := io.Copy(&ciph, rd); err != nil {
+		return nil, CryptError{"read", err}
+	}
+	plaintext, err := aesgcm.Open(nil, nonce.Bytes(), ciph.Bytes(), nil)
+	if err != nil {
+		return nil, CryptError{"read", err}
+	}
+	return plaintext, nil
 }
 
 type localNetList []*net.IPNet
@@ -355,6 +398,12 @@ var (
 	CurrentRealmKey = mustMakeRandStr(realmChars, 6)
 	basicRealm      = fmt.Sprintf(`Basic realm="Gamcro: %s"`, CurrentRealmKey)
 )
+
+func (g *Gamcro) releaseClient(wr http.ResponseWriter, rq *http.Request) {
+	log.Infoa("Release `client`", g.singleClient)
+	g.singleClient = ""
+	wr.WriteHeader(http.StatusNoContent)
+}
 
 func (g *Gamcro) auth(h http.HandlerFunc) http.HandlerFunc {
 	return func(wr http.ResponseWriter, rq *http.Request) {

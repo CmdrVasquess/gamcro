@@ -9,7 +9,11 @@
 <main>
   <div id="top">
     <QuickText :typeMsg="typeMsg" :clipMsg="clipMsg"/>
-    <button @click="addMsg()">New Text</button>
+    <div>
+      <button @click="addMsg()">New Text</button>
+      <button v-if="api('RoboClipGet')" title="New text from remote clipboard"
+              @click="getClip()">Get remote Clip</button>
+    </div>
   </div>
   <transition-group name="msgs">
     <Message v-for="(msg, idx) in msgs" :key="msg.key" :index="idx"
@@ -21,23 +25,27 @@
 <span class="menu" v-else @click="menu=true">≡</span>
 <transition name="menu">
   <aside v-if="menu" class="menu">
-    v{{version}}
-    <div @click="menu=false;modal='import'">↴ Import</div>
-    <div @click="menu=false;modal='export'">Export ↱</div>
+    <span style="display:inline-block;padding-bottom:.5em">v{{version}}</span>
+    <div @click="menu=false;modal='import'" class="button">↴ Import</div>
+    <div @click="menu=false;modal='export'" class="button">Export ↱</div>
+    <div v-if="!cfg.MultiClient" @click="menu=false;disconnect()" class="button"
+         title="Allow to connect from anoter machine">Disconnect</div>
   </aside>
 </transition>
 <transition name="fade">
   <Modal id="export" v-if="modal=='export'">
     <h1>Export texts</h1>
-    <textarea cols="80" v-model="exportText" readonly></textarea>
+    <textarea v-model="exportText" readonly></textarea>
     <button @click="modal=''">Close</button>
   </Modal>
 </transition>
 <transition name="fade">
   <Modal id="export" v-if="modal=='import'">
     <h1>Import texts</h1>
-    <textarea cols="80" v-model="impTexts"></textarea>
-    <button @click="modal='';importText()">Import</button>
+    <textarea v-model="impTexts"></textarea>
+    <button @click="modal='';importText()"
+            :disabled="!impValid">Import</button>
+    <button @click="modal=''">Close</button>
   </Modal>
 </transition>
 </template>
@@ -63,7 +71,12 @@ export default {
             imexpdlg: false,
             msgseq: 0,
             modal: "",
-            impTexts: ""
+            impTexts: "",
+            cfg: {
+                "Version": "?.?.?",
+                "APIs": ['RoboClipGet'],
+                "MultiClient": false
+            }
         }
     },
     computed: {
@@ -73,7 +86,15 @@ export default {
                 txts.push(m.text);
             }
             return JSON.stringify(txts, null, 2);
-        }
+        },
+        impValid() {
+            try {
+                let msgs = JSON.parse(this.impTexts);
+                return Array.isArray(msgs);
+            } catch(x) {
+                return false;
+            }
+         }
     },
     methods: {
         addMsg() {
@@ -107,6 +128,18 @@ export default {
                     this.qclip = "";
                 });
         },
+        getClip() {
+            this.modal = 'remote-clip';
+            fetch('/clip')
+                .then(resp => resp.text())
+                .then(txt => {
+                    if (txt.length==0) return;
+                    this.msgseq++;
+                    let msg = {key: this.msgseq, text: txt};
+                    this.msgs.unshift(msg);
+                })
+                .catch(x => this.status=x);
+        },
         importText() {
             try {
                 let txts = JSON.parse(this.impTexts);
@@ -119,6 +152,18 @@ export default {
             } catch(x) {
                 console.log("import texts: ", x);
             }
+        },
+        disconnect() {
+            fetch("/client/release")
+                .then(resp => {
+                    console.log("disconnect:", resp.status);
+                });
+        },
+        api(name) {
+            for (let n of this.cfg.APIs) {
+                if (n == name) return true;
+            }
+            return false;
         }
     },
     mounted() {
@@ -146,6 +191,13 @@ export default {
             this.msgs = [{key: this.msgseq, text: ""}];
             this.msgseq = 0;
         }
+        fetch("/config")
+            .then(resp => resp.json())
+            .then(conf => {
+                console.log(conf);
+                this.cfg = conf;
+            })
+            .catch(() => console.log("failed to fetch config"));
     },
     watch: {
         msgs: {
@@ -260,9 +312,11 @@ aside > div {
     font-weight: bold;
     padding: .3em .7em;
     margin: .2em;
+}
+aside > div.button {
     cursor: pointer;
 }
-aside > div:hover {
+aside > div.button:hover {
     color: var(--colFgr);
 }
 h1 { margin: .5em 0; }
@@ -313,6 +367,7 @@ div.modal-box h1 {
     font-size: 150%;
 }
 div.modal-box textarea {
+    width: 60vw;
     height: 60vh;
 }
 </style>
