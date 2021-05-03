@@ -36,10 +36,10 @@ type Gamcro struct {
 	MultiClient     bool
 	ClientNet       string
 	TxtLimit        int
-	RoboAPIs        GamcroAPI
+	APIs            GamcroAPI
 }
 
-func (g *Gamcro) Run(qrFlag bool) error {
+func (g *Gamcro) Run() error {
 	if g.TxtLimit <= 0 {
 		g.TxtLimit = 256
 	}
@@ -136,7 +136,7 @@ func (g *Gamcro) handleConfig(wr http.ResponseWriter, rq *http.Request) {
 		MultiClient: g.MultiClient,
 	}
 	for i := GamcroAPI(1); i < GamcroAPI_end; i <<= 1 {
-		if g.RoboAPIs.Active(i) {
+		if g.APIs.Active(i) {
 			cfg.APIs = append(cfg.APIs, i.String())
 		}
 	}

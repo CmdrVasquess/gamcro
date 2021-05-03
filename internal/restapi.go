@@ -55,7 +55,7 @@ func ParseRoboAPISet(flag string) (set GamcroAPI) {
 }
 
 func (g *Gamcro) mayRobo(api GamcroAPI, wr http.ResponseWriter) bool {
-	res := g.RoboAPIs.Active(api)
+	res := g.APIs.Active(api)
 	if !res {
 		log.Warna("blocked `robo api`", api.String())
 		wr.WriteHeader(http.StatusForbidden)

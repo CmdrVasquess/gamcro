@@ -11,7 +11,7 @@
     <QuickText :typeMsg="typeMsg" :clipMsg="clipMsg"/>
     <div>
       <button @click="addMsg()">New Text</button>
-      <button v-if="api('RoboClipGet')" title="New text from remote clipboard"
+      <button v-if="api('ClipGetAPI')" title="New text from remote clipboard"
               @click="getClip()">Get remote Clip</button>
     </div>
   </div>

@@ -126,10 +126,16 @@ func cryptWriteFile(name string, passwd, data []byte) error {
 	return cryptWrite(wr, passwd, data)
 }
 
-const cryptKeySaltSize = 32
+const (
+	cryptKeySaltSize = 32
+	cryptIOVersion   = 1
+)
 
 func cryptWrite(wr io.Writer, passwd, data []byte) error {
 	if len(passwd) == 0 {
+		if _, err := wr.Write([]byte{0}); err != nil {
+			return err
+		}
 		_, err := wr.Write(data)
 		return err
 	}
@@ -151,6 +157,9 @@ func cryptWrite(wr io.Writer, passwd, data []byte) error {
 		return CryptError{"write", err}
 	}
 	ciph := aesgcm.Seal(nil, nonce, data, nil)
+	if _, err := wr.Write([]byte{cryptIOVersion}); err != nil {
+		return CryptError{"write", err}
+	}
 	if _, err = wr.Write(salt); err != nil {
 		return CryptError{"write", err}
 	}
@@ -175,12 +184,36 @@ func cryptReadFile(name string, passwd []byte) ([]byte, error) {
 func cryptRead(rd io.Reader, passwd []byte) ([]byte, error) {
 	if len(passwd) == 0 {
 		var buf bytes.Buffer
+		if _, err := io.CopyN(&buf, rd, 1); err != nil {
+			return nil, err
+		}
+		if buf.Bytes()[0] != 0 {
+			return nil, fmt.Errorf(
+				"detected crypt IO version %d for cleartext read",
+				buf.Bytes()[0],
+			)
+		}
+		buf.Reset()
 		if _, err := io.Copy(&buf, rd); err != nil {
 			return nil, err
 		}
 		return buf.Bytes(), nil
 	}
 	var salt bytes.Buffer
+	if _, err := io.CopyN(&salt, rd, 1); err != nil {
+		return nil, CryptError{"read", err}
+	}
+	if salt.Bytes()[0] != cryptIOVersion {
+		return nil, CryptError{
+			"read",
+			fmt.Errorf(
+				"detected crypt IO version %d instead of %d",
+				salt.Bytes()[0],
+				cryptIOVersion,
+			),
+		}
+	}
+	salt.Reset()
 	if _, err := io.CopyN(&salt, rd, cryptKeySaltSize); err != nil {
 		return nil, CryptError{"read", err}
 	}

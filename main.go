@@ -21,7 +21,7 @@ import (
 
 var (
 	gamcro = internal.Gamcro{
-		RoboAPIs: internal.TypeAPI | internal.ClipPostAPI,
+		APIs: internal.TypeAPI | internal.ClipPostAPI,
 	}
 
 	paths = ospath.NewApp(ospath.ExeDir(), internal.AppName)
@@ -49,7 +49,7 @@ func main() {
 	flag.IntVar(&gamcro.TxtLimit, "text-limit", 256, docTxtLimitFlag)
 	flag.BoolVar(&gamcro.MultiClient, "multi-client", false, docMCltFlag)
 	flag.StringVar(&gamcro.ClientNet, "clients", "local", docClientsFlag)
-	fApis := flag.String("apis", gamcro.RoboAPIs.FlagString(), docAPIsFlag())
+	fApis := flag.String("apis", gamcro.APIs.FlagString(), docAPIsFlag())
 	noPass := flag.Bool("no-passphrase", false, docNoPassFlags)
 	fQR := flag.Bool("qr", false, docQRFlag)
 	fLog := flag.String("log", "", c4hgol.LevelCfgDoc(nil))
@@ -73,9 +73,9 @@ func main() {
 			}
 		}
 	}
-	gamcro.RoboAPIs = internal.ParseRoboAPISet(*fApis)
+	gamcro.APIs = internal.ParseRoboAPISet(*fApis)
 	log.Infof("Authenticate to realm \"Gamcro: %s\"", internal.CurrentRealmKey)
-	log.Fatale(gamcro.Run(*fQR))
+	log.Fatale(gamcro.Run())
 }
 
 func ensureCreds(flag string, cauth *internal.AuthCreds) (err error) {

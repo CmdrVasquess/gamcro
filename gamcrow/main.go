@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 
@@ -16,7 +17,7 @@ import (
 var (
 	paths  = ospath.NewApp(ospath.ExeDir(), internal.AppName)
 	gamcro = internal.Gamcro{
-		RoboAPIs: internal.TypeAPI | internal.ClipPostAPI,
+		APIs: internal.TypeAPI | internal.ClipPostAPI,
 	}
 	defaultAuthFile = paths.LocalData(internal.DefaultCredsFile)
 
@@ -77,29 +78,35 @@ func main() {
 	)
 
 	startBtn = widget.NewButton("Start", nil)
+	startBtn.Disable()
 	startBtn.OnTapped = startGamcro
 
+	passEntry := widget.NewPasswordEntry()
+	passEntry.Validator = func(s string) error {
+		if s == "" {
+			startBtn.Disable()
+			return errors.New("Passphrase must not be empty")
+		}
+		startBtn.Enable()
+		return nil
+	}
+	passEntry.OnChanged = func(s string) {
+		gamcro.Passphr = []byte(s)
+	}
+	passFrom := widget.NewForm(widget.NewFormItem("Passphrase", passEntry))
+
 	wapp = gapp.NewWindow("GamcroW")
-	wapp.SetContent(container.NewVBox(tabs, startBtn))
+	wapp.SetContent(container.NewVBox(
+		tabs,
+		passFrom,
+		startBtn,
+	))
 	wapp.ShowAndRun()
 }
 
 func startGamcro() {
 	prefs := gapp.Preferences()
 	startBtn.Disable()
-	// TODO when / how get passphrase
-	// log.Println(gamcro.Passphr)
-	// if len(gamcro.Passphr) == 0 {
-	// 	var ok bool
-	// 	passEntry := widget.NewPasswordEntry()
-	// 	passDlog := dialog.NewForm("TLS", "OK", "Cancel",
-	// 		[]*widget.FormItem{
-	// 			widget.NewFormItem("Passphrase", passEntry),
-	// 		},
-	// 		func(b bool) { ok = b },
-	// 		wapp,
-	// 	)
-	// }
 	gamcro.SrvAddr = prefs.String(prefSrvAddr)
 	if configTab.user != "" && configTab.passwd != "" {
 		log.Println(defaultAuthFile)
@@ -120,8 +127,12 @@ func startGamcro() {
 	gamcro.TxtLimit = prefs.Int(prefTextLim)
 	gamcro.TLSCert = paths.LocalData("cert.pem")
 	gamcro.TLSKey = paths.LocalData("key.pem")
+	gamcro.APIs = apisTab.apis
+
+	connectTab.setHint(gamcro.ConnectHint())
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	enc.Encode(&gamcro)
+	go gamcro.Run()
 }
