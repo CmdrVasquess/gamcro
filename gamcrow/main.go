@@ -27,6 +27,7 @@ var (
 	apisTab    *APIsTab
 	connectTab *ConnectTab
 	startBtn   *widget.Button
+	authFile   string
 )
 
 func hasAuthFile() string {
@@ -36,6 +37,18 @@ func hasAuthFile() string {
 		return ""
 	}
 	return defaultAuthFile
+}
+
+func guide() string {
+	cfgValid := configTab.userEntry.Validate() == nil
+	cfgValid = cfgValid && configTab.passEntry.Validate() == nil
+	if authFile == "" && !cfgValid {
+		return "Enter Web user and password on Config tab"
+	}
+	if len(gamcro.Passphr) == 0 {
+		return "Enter Passphrase"
+	}
+	return "Press Start"
 }
 
 const (
@@ -66,6 +79,7 @@ func main() {
 	gapp = app.NewWithID("de.fractalqb.jv.gamcro")
 	prefs := gapp.Preferences()
 	initPrefs(prefs)
+	authFile = hasAuthFile()
 
 	configTab = NewConfigTab(prefs, &gamcro)
 	apisTab = NewAPIsTab(prefs)
@@ -92,6 +106,7 @@ func main() {
 	}
 	passEntry.OnChanged = func(s string) {
 		gamcro.Passphr = []byte(s)
+		connectTab.setGuide(guide())
 	}
 	passFrom := widget.NewForm(widget.NewFormItem("Passphrase", passEntry))
 

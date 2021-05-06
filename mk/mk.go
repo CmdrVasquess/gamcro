@@ -60,6 +60,7 @@ func init() {
 
 	tasks.Def(tBuild, func(dir *gomk.WDir) {
 		dir.Exec("go", buildCmd...)
+		dir.Cd("gamcrow").Exec("go", buildCmd...)
 	})
 
 	tasks.Def(tTest, func(dir *gomk.WDir) {

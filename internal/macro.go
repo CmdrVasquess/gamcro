@@ -6,27 +6,32 @@ import (
 	"strings"
 	"time"
 
+	"git.fractalqb.de/fractalqb/qbsllm"
 	"git.fractalqb.de/fractalqb/xsx/gem"
-	robi "github.com/go-vgo/robotgo"
+	"github.com/go-vgo/robotgo"
+)
+
+var (
+	mlog = qbsllm.New(qbsllm.Lnormal, "macro", nil, nil)
 )
 
 const macroPause = 50 * time.Millisecond
 
 func runMacro(m []gem.Expr) {
 	for _, step := range m {
-		log.Debuga("macro `step`", step)
+		mlog.Debuga("macro `step`", step)
 		switch s := step.(type) {
 		case *gem.Atom:
 			if s.Quoted() {
-				log.Tracea("type `string`", s.Txt)
-				robi.TypeStr(s.Txt)
+				mlog.Tracea("type `string`", s.Txt)
+				robotgo.TypeStr(s.Txt)
 			} else {
-				log.Tracea("tap `key`", s.Txt)
-				robi.KeyTap(s.Txt)
+				mlog.Tracea("tap `key`", s.Txt)
+				robotgo.KeyTap(s.Txt)
 			}
 		case *gem.Sequence:
 			if s.Meta() {
-				log.Errora("macro has meta sequence", step)
+				mlog.Errora("macro has meta sequence", step)
 			} else {
 				switch s.Brace() {
 				case gem.Square:
@@ -34,11 +39,11 @@ func runMacro(m []gem.Expr) {
 				case gem.Curly:
 					playMouse(s)
 				case gem.Paren:
-					play2Proc(s)
+					mlog.Errora("cannot hanlde paren sequence")
 				}
 			}
 		default:
-			log.Errora("unhandled `element type`", reflect.TypeOf(step))
+			mlog.Errora("unhandled `element type`", reflect.TypeOf(step))
 		}
 		time.Sleep(macroPause) // TODO make it adjustable
 	}
@@ -46,7 +51,7 @@ func runMacro(m []gem.Expr) {
 
 func playKey(m *gem.Sequence) {
 	if len(m.Elems) == 0 {
-		log.Warns("empty key sequence in")
+		mlog.Warns("empty key sequence in")
 		return
 	}
 	var cmd []string
@@ -64,11 +69,11 @@ func playKey(m *gem.Sequence) {
 		case "tap":
 			action = 0
 		default:
-			log.Errora("unknown `key action`", e.Txt)
+			mlog.Errora("unknown `key action`", e.Txt)
 			return
 		}
 		if len(m.Elems) < 2 {
-			log.Errora("missing key spec in `key sequence`", m)
+			mlog.Errora("missing key spec in `key sequence`", m)
 		}
 		cmd = append(cmd, m.Elems[1].(*gem.Atom).Txt)
 		modsAt = 2
@@ -84,12 +89,12 @@ func playKey(m *gem.Sequence) {
 		for i := range cmd {
 			mods[i] = cmd[i]
 		}
-		log.Tracea("tap `key` with `mods`", cmd[0], mods[1:])
-		robi.KeyTap(cmd[0], mods[1:]...)
+		mlog.Tracea("tap `key` with `mods`", cmd[0], mods[1:])
+		robotgo.KeyTap(cmd[0], mods[1:]...)
 	default:
 		cmd[0], cmd[1] = cmd[1], cmd[0]
-		log.Tracea("toggle `key` with `mods`", cmd[0], cmd[1:])
-		robi.KeyToggle(cmd[0], cmd[1:]...)
+		mlog.Tracea("toggle `key` with `mods`", cmd[0], cmd[1:])
+		robotgo.KeyToggle(cmd[0], cmd[1:]...)
 	}
 }
 
@@ -111,22 +116,22 @@ func playMouse(m *gem.Sequence) {
 				m.Elems[ip].(*gem.Atom).Txt,
 				m.Elems[ip+1].(*gem.Atom).Txt)
 			ip++
-			robi.MoveMouse(xk, yk)
+			robotgo.MoveMouse(xk, yk)
 		case "drag":
 			ip++
 			xk, yk := mouseCoos(
 				m.Elems[ip].(*gem.Atom).Txt,
 				m.Elems[ip+1].(*gem.Atom).Txt)
 			ip++
-			robi.DragMouse(xk, yk)
+			robotgo.DragMouse(xk, yk)
 		case "scroll":
 			ip++
 			count, _ := strconv.ParseInt(m.Elems[ip].(*gem.Atom).Txt, 10, 32)
 			ip++
 			dir := m.Elems[ip].(*gem.Atom).Txt
-			robi.ScrollMouse(int(count), dir)
+			robotgo.ScrollMouse(int(count), dir)
 		default:
-			log.Errora("unknown `mouse action`", m.Elems[ip].(*gem.Atom).Txt)
+			mlog.Errora("unknown `mouse action`", m.Elems[ip].(*gem.Atom).Txt)
 		}
 	}
 }
@@ -135,7 +140,7 @@ func mouseCoos(xStr, yStr string) (x int, y int) {
 	xpf := strings.ContainsAny(xStr, "+-")
 	ypf := strings.ContainsAny(yStr, "+-")
 	if xpf || ypf {
-		x, y = robi.GetMousePos()
+		x, y = robotgo.GetMousePos()
 		if xpf {
 			tmp, _ := strconv.ParseInt(xStr[1:], 10, 32)
 			if xStr[0] == '+' {
@@ -161,11 +166,11 @@ func mouseCoos(xStr, yStr string) (x int, y int) {
 	} else {
 		px, err := strconv.ParseInt(xStr, 10, 32)
 		if err != nil {
-			log.Errora("parse mouse x-coo '%s'", xStr)
+			mlog.Errora("parse mouse x-coo '%s'", xStr)
 		}
 		py, err := strconv.ParseInt(yStr, 10, 32)
 		if err != nil {
-			log.Errora("parse mouse y-coo '%s'", yStr)
+			mlog.Errora("parse mouse y-coo '%s'", yStr)
 		}
 		x = int(px)
 		y = int(py)
@@ -176,29 +181,46 @@ func mouseCoos(xStr, yStr string) (x int, y int) {
 func mouseButton(which string, action string) {
 	switch action {
 	case "click":
-		robi.MouseClick(which, false)
+		robotgo.MouseClick(which, false)
 	case "double":
-		robi.MouseClick(which, true)
+		robotgo.MouseClick(which, true)
 	case "down":
-		robi.MouseToggle("down", which)
+		robotgo.MouseToggle("down", which)
 	case "up":
-		robi.MouseToggle("up", which)
+		robotgo.MouseToggle("up", which)
 	default:
-		log.Errora("unknown `mouse-button action`", action)
+		mlog.Errora("unknown `mouse-button action`", action)
 	}
 }
 
-func play2Proc(s *gem.Sequence) {
-	if len(s.Elems) > 0 {
-		// TODO: switching seems to not yet work?
-		procNm := s.Elems[0].(*gem.Atom).Txt
-		log.Debuga("macro switch to `process`", procNm)
-		current := robi.GetActive()
-		robi.ActiveName(procNm)
-		defer func() {
-			log.Debuga("macro switch back from `process`", procNm)
-			robi.SetActive(current)
-		}()
-		runMacro(s.Elems[1:])
-	}
+// func play2Proc(s *gem.Sequence) {
+// 	if len(s.Elems) > 0 {
+// 		// TODO: switching seems to not yet work?
+// 		procNm := s.Elems[0].(*gem.Atom).Txt
+// 		mlog.Debuga("macro switch to `process`", procNm)
+// 		current := robotgo.GetActive()
+// 		robotgo.ActiveName(procNm)
+// 		defer func() {
+// 			mlog.Debuga("macro switch back from `process`", procNm)
+// 			robotgo.SetActive(current)
+// 		}()
+// 		runMacro(s.Elems[1:])
+// 	}
+// }
+
+var currentMacros macroCfg
+
+type macro struct {
+	name string
+	m    []gem.Expr
+}
+
+type macroCfg struct {
+	name   string
+	macros []macro
+}
+
+func (mcfg *macroCfg) run(i int) {
+	m := mcfg.macros[i] // TODO checks
+	runMacro(m.m)
 }

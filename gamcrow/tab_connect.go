@@ -17,13 +17,14 @@ var logoPNG []byte
 
 type ConnectTab struct {
 	container.TabItem
-	box *fyne.Container
-	top fyne.CanvasObject
-	img *canvas.Image
+	box   *fyne.Container
+	top   fyne.CanvasObject
+	img   *canvas.Image
+	guide *widget.Label
 }
 
 func NewConnectTab() *ConnectTab {
-	lb := widget.NewLabel("Enter passphrase and press Start")
+	lb := widget.NewLabel(guide())
 	img := canvas.NewImageFromReader(bytes.NewReader(logoPNG), "Logo")
 	img.Resize(fyne.Size{320, 320})
 	img.FillMode = canvas.ImageFillOriginal
@@ -33,8 +34,13 @@ func NewConnectTab() *ConnectTab {
 		box:     vbox,
 		top:     lb,
 		img:     img,
+		guide:   lb,
 	}
 	return res
+}
+
+func (ctab *ConnectTab) setGuide(txt string) {
+	ctab.guide.SetText(txt)
 }
 
 func (ctab *ConnectTab) setHint(urlstr string) {

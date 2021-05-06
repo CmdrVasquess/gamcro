@@ -1,10 +1,12 @@
 # <img src="web-ui/public/logo.png" height="60">amcro
 [![Go Report Card](https://goreportcard.com/badge/github.com/CmdrVasquess/gamcro)](https://goreportcard.com/report/github.com/CmdrVasquess/gamcro)
 
-Gamcro: Game Macros allows you to send input from another machine to
-the program on your computer that is currently active, aka which is in
-the foreground. This can be rather useful, e.g. when playing a
-computer game.
+Gamcro: Game Macros allow you to send input from networked devices that
+can run decent web browsers to the program on your computer that is
+currently active - i.e. that is in the foreground. This can be quite
+useful, for example when playing a computer game.
+
+![Web UI](doc/why.svg "Why")
 
 _But before you continue: Keep in mind that programs like Gamcro can
 also be a serious security risk. Imagine that such a program is
@@ -31,49 +33,54 @@ advise in mind:
 ## Using Gamcro
 
 Currently Gamcro comes as a terminal application. This is not fancy
-but it saves some memory and processor load on your gaming
-machine. So, be brave and fire up your machine's command line
-interface. On Windows this might be the `cmd` tool or, more up-to-date
-the `powershell`. UN!X users are expected to know what they do.
+but it saves some memory and processor load on your gaming machine.
+(A GUI version is underway) So, be brave and fire up your machine's 
+command line interface. On Windows this might be the `cmd` tool or,
+more up-to-date the `powershell`. UN!X users are expected to know
+what they do.
 
 Let's say you put the Gamcro executable, `gamcro.exe` on Win or simply
-`gamcro` on Unices, into its own folder `gamcro-dir`. And you also put
-a file with the HTTP basic auth `user:password` into a subdirectory
-`data` in that same directory. Then you should have a directory tree
-like this (Win example):
+`gamcro` on Unices, into its own folder `gamcro-dir`. Gamcro will
+populate this folder with some supplementary files. After running
+Gamcro for the first time you will have something like:
 
 ```
 …\gamcro-dir\
    ├─ gamcro.exe
+   ├─ cert.pem
+   ├─ key.pem
    └─ auth.txt
 ```
 
-Further more you decide to have the user “JohnDoe” with the password
-“secret” to be the one who may send commands to Gamcro. Then the
-content of `auth.txt` should be a single line:
-
-```
-JohnDoe:secret
-```
 To run gamcro simply `cd` into the `gamcro-dir` and enter the following command
 
 ```
-.\gamcro.exe -auth auth.txt
+.\gamcro.exe
 ```
 
-Then Gamcro starts and shows you this message:
+Then Gamcro starts and asks you for some input:
+
+1. A passphrase to make sure that the Web GUI has a secure connection to Gamcro
+2. Username and password the user of the Web GUI must enter to get access
+
+Passphrase and password are entered blindly, i.e. you—and no one else—will see
+what you type.
 
 ```
-     ___     __  ____                                
-    | \ \   / / / ___| __ _ _ __ ___   ___ _ __ ___  
- _  | |\ \ / (_) |  _ / _` | '_ ` _ \ / __| '__/ _ \ 
-| |_| | \ V / _| |_| | (_| | | | | | | (__| | | (_) |
- \___/   \_/ (_)\____|\__,_|_| |_| |_|\___|_|  \___/  v0.4.0 [alpha #33]
-Apr 12 17:11:35.670 INFO  [gamcro] Read HTTP basic auth user:password from `file:auth.txt`
-Apr 12 17:11:35.671 INFO  [gamcro] Load TLS `certificate:cert.pem`
-Apr 12 17:11:35.671 INFO  [gamcro] Load TLS `key:key.pem`
-Apr 12 17:11:35.671 INFO  [gamcro] Runninig gamcro HTTPS server on :9420
-Apr 12 17:11:35.671 INFO  [gamcro] Use https://10.0.0.2:9420/ to connect your browser to the Web UI
+  ____                                
+ / ___| __ _ _ __ ___   ___ _ __ ___  
+| |  _ / _` | '_ ` _ \ / __| '__/ _ \ 
+| |_| | (_| | | | | | | (__| | | (_) |
+ \____|\__,_|_| |_| |_|\___|_|  \___/  v0.6.0 [alpha #113; go1.16.3]
+Enter passphrase (empty skips security): 
+May 05 20:22:44.861 INFO  [gamcro] Need user and password for HTTP basic auth
+Enter HTTP basic auth user: johndoe
+Enter HTTP basic auth password: 
+Repeat password: 
+Save user:password to 'auth.txt' (y/N)? y
+May 05 20:23:05.577 INFO  [gamcro] Use https://192.168.1.16:9420/ to connect your browser to the Web UI
+May 05 20:23:05.577 INFO  [gamcro] Authenticate to realm "Gamcro: 2R30A4"
+May 05 20:23:05.578 INFO  [gamcro] Create self signed `certificate:cert.pem` with `key:key.pem` as `common name:JV:Gamcro`
 ```
 
 Note that Gamcro creates a self-signed X.509 certificate if it does

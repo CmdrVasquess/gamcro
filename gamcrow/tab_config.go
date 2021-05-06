@@ -15,37 +15,44 @@ type ConfigTab struct {
 	container.TabItem
 	user   string
 	passwd string
+
+	userEntry *widget.Entry
+	passEntry *widget.Entry
 }
 
 func NewConfigTab(prefs fyne.Preferences, gamcro *internal.Gamcro) *ConfigTab {
 	res := &ConfigTab{}
 
-	userEntry := widget.NewEntry()
-	userEntry.Validator = func(s string) error {
-		if hasAuthFile() != "" || s != "" {
+	res.userEntry = widget.NewEntry()
+	res.userEntry.Validator = func(s string) error {
+		if authFile != "" || s != "" {
 			return nil
 		}
 		return errors.New("You must provide a username")
 	}
 
-	passEntry := widget.NewPasswordEntry()
-	passEntry.Validator = func(s string) error {
-		if userEntry.Text != "" && s == "" {
+	res.passEntry = widget.NewPasswordEntry()
+	res.passEntry.Validator = func(s string) error {
+		if res.userEntry.Text != "" && s == "" {
 			return errors.New("Password must not be empty")
 		}
 		return nil
 	}
-	passEntry.OnChanged = func(s string) { res.passwd = s }
-	passEntry.Disable()
+	res.passEntry.OnChanged = func(s string) {
+		res.passwd = s
+		connectTab.setGuide(guide())
+	}
+	res.passEntry.Disable()
 
-	userEntry.OnChanged = func(user string) {
+	res.userEntry.OnChanged = func(user string) {
 		res.user = user
 		if user == "" {
-			passEntry.Disable()
+			res.passEntry.Disable()
 		} else {
-			passEntry.Enable()
+			res.passEntry.Enable()
 		}
-		passEntry.Validate()
+		res.passEntry.Validate()
+		connectTab.setGuide(guide())
 	}
 
 	txtLimEntry := widget.NewEntry()
@@ -69,8 +76,8 @@ func NewConfigTab(prefs fyne.Preferences, gamcro *internal.Gamcro) *ConfigTab {
 	clientsSelect.OnChanged = func(s string) { prefs.SetString(prefClients, s) }
 
 	form := widget.NewForm(
-		widget.NewFormItem("Web User", userEntry),
-		widget.NewFormItem("Web Password", passEntry),
+		widget.NewFormItem("Web User", res.userEntry),
+		widget.NewFormItem("Web Password", res.passEntry),
 		widget.NewFormItem("Server Address", widget.NewEntryWithData(
 			binding.BindPreferenceString(prefSrvAddr, prefs),
 		)),

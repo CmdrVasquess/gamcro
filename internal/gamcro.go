@@ -10,13 +10,17 @@ import (
 	"net/http"
 	"os"
 
+	"git.fractalqb.de/fractalqb/c4hgol"
 	"git.fractalqb.de/fractalqb/qbsllm"
 	"github.com/gorilla/mux"
 )
 
 var (
 	log    = qbsllm.New(qbsllm.Lnormal, AppName, nil, nil)
-	LogCfg = qbsllm.NewConfig(log)
+	LogCfg = c4hgol.Config(
+		qbsllm.NewConfig(log),
+		qbsllm.NewConfig(mlog),
+	)
 
 	//go:embed webui
 	webfs embed.FS
@@ -29,7 +33,7 @@ const (
 
 type Gamcro struct {
 	SrvAddr         string
-	Passphr         []byte
+	Passphr         []byte `json:"-"`
 	TLSCert, TLSKey string
 	ClientAuth      AuthCreds
 	singleClient    string
@@ -131,14 +135,20 @@ func (g *Gamcro) handleConfig(wr http.ResponseWriter, rq *http.Request) {
 		Version     string
 		APIs        []string
 		MultiClient bool
+		MacroSet    string
+		Macros      []string
 	}{
 		Version:     fmt.Sprintf("%d.%d.%d", Major, Minor, Patch),
 		MultiClient: g.MultiClient,
+		MacroSet:    currentMacros.name,
 	}
 	for i := GamcroAPI(1); i < GamcroAPI_end; i <<= 1 {
 		if g.APIs.Active(i) {
 			cfg.APIs = append(cfg.APIs, i.String())
 		}
+	}
+	for _, m := range currentMacros.macros {
+		cfg.Macros = append(cfg.Macros, m.name)
 	}
 	wr.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(wr)
