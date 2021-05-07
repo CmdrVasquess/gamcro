@@ -74,7 +74,7 @@ export default {
             impTexts: "",
             cfg: {
                 "Version": "?.?.?",
-                "APIs": ['RoboClipGet'],
+                "APIs": [],
                 "MultiClient": false
             }
         }

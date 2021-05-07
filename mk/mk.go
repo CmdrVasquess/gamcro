@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 
 	"git.fractalqb.de/fractalqb/gomk"
@@ -47,27 +48,41 @@ func webAssetsFilter(dir string, info os.FileInfo) bool {
 func init() {
 	tasks.Def(tTools, func(dir *gomk.WDir) {
 		task.GetVersioner(dir.Build())
+		err := task.MkGetTool(
+			dir.Build(),
+			"fyne",
+			"fyne.io/fyne/v2/cmd/fyne",
+		)
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	tasks.Def(tGen, func(dir *gomk.WDir) {
-		dir.Exec("go", "generate", "./...")
+		dir.Exec(nil, "go", "generate", "./...")
 	}, tTools)
 
 	tasks.Def(tWebUI, func(dir *gomk.WDir) {
-		dir.Cd("web-ui").
-			Exec("npm", "run", "build")
+		dir.Cd("web-ui").Exec(nil, "npm", "run", "build")
 	})
 
 	tasks.Def(tBuild, func(dir *gomk.WDir) {
-		dir.Exec("go", buildCmd...)
-		dir.Cd("gamcrow").Exec("go", buildCmd...)
-	})
+		dir.Exec(nil, "go", buildCmd...)
+		switch runtime.GOOS {
+		case "windows":
+			dir.Cd("gamcrow").Exec(nil, "fyne", "package", "-icon", "gamcrow.png")
+		default:
+			dir.Cd("gamcrow").Exec(nil, "go", buildCmd...)
+		}
+	}, tTools)
 
 	tasks.Def(tTest, func(dir *gomk.WDir) {
-		dir.Exec("go", "test", "./...")
+		dir.Exec(nil, "go", "test", "./...")
 	})
 
-	tasks.Def(tDist, nil, tWebUI, tGen, tTest, tBuild)
+	tasks.Def(tDist, func(dir *gomk.WDir) {
+		// TODO do the dist packaging from here and make Makefile obsolete
+	}, tWebUI, tGen, tTest, tBuild)
 }
 
 func main() {
