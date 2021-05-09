@@ -5,7 +5,7 @@ go 1.16
 require (
 	fyne.io/fyne/v2 v2.0.3
 	git.fractalqb.de/fractalqb/c4hgol v0.10.4
-	git.fractalqb.de/fractalqb/gomk v0.3.0
+	git.fractalqb.de/fractalqb/gomk v0.4.0
 	git.fractalqb.de/fractalqb/pack v0.6.3
 	git.fractalqb.de/fractalqb/qbsllm v0.11.2
 	git.fractalqb.de/fractalqb/sllm v1.0.1 // indirect

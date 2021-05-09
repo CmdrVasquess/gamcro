@@ -35,7 +35,7 @@ func showBanner() {
 	os.Stdout.Write(banner)
 	fmt.Printf("v%d.%d.%d [%s #%d; %s]\n",
 		internal.Major, internal.Minor, internal.Patch,
-		internal.Quality, internal.BuildNo,
+		internal.Prerelease, internal.BuildNo,
 		runtime.Version(),
 	)
 }

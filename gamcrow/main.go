@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -26,6 +27,7 @@ var (
 	configTab  *ConfigTab
 	apisTab    *APIsTab
 	connectTab *ConnectTab
+	mainBox    *fyne.Container
 	startBtn   *widget.Button
 	authFile   string
 )
@@ -110,12 +112,14 @@ func main() {
 	}
 	passFrom := widget.NewForm(widget.NewFormItem("Passphrase", passEntry))
 
-	wapp = gapp.NewWindow("GamcroW")
-	wapp.SetContent(container.NewVBox(
+	mainBox = container.NewVBox(
 		tabs,
 		passFrom,
 		startBtn,
-	))
+	)
+
+	wapp = gapp.NewWindow("GamcroW")
+	wapp.SetContent(mainBox)
 	wapp.ShowAndRun()
 }
 
@@ -145,6 +149,11 @@ func startGamcro() {
 	gamcro.APIs = apisTab.apis
 
 	connectTab.setHint(gamcro.ConnectHint())
+	mainBox.Remove(startBtn)
+	mainBox.Add(widget.NewLabel(fmt.Sprintf(
+		"Browser Login to Gamcro: %s",
+		internal.CurrentRealmKey,
+	)))
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")

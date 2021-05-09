@@ -5,8 +5,8 @@ git.fractalqb.de/fractalqb/c4hgol v0.10.4 h1:zomUzJTrazoAKsabEbL0qSLVSbPdF4hxEF1
 git.fractalqb.de/fractalqb/c4hgol v0.10.4/go.mod h1:WaEjUnHxxec4RshLTh6cbtbzTnaYYgsK01gjrkBmuoo=
 git.fractalqb.de/fractalqb/c4qblog v0.9.6 h1:+nd6UUmSTG0FSzvLIPu5coFTGbfgFJT13qrRXrpW1Jg=
 git.fractalqb.de/fractalqb/c4qblog v0.9.6/go.mod h1:6KAB44D/fZR2W+/saWzn0MV/Mt6Yd1rIGqsKtvx0RcU=
-git.fractalqb.de/fractalqb/gomk v0.3.0 h1:eJI5FXely8RwIJmPAqWdiE5DSali7tSgf7+kAvFE3ds=
-git.fractalqb.de/fractalqb/gomk v0.3.0/go.mod h1:6cT3Lmrf2l8jYrEmroA9b+Oxwr5f9dydLg7uN5JS+7o=
+git.fractalqb.de/fractalqb/gomk v0.4.0 h1:hBLWqcipxRrWGUvQLezwv5dO3ECRmd+sErM5LJ4Nalg=
+git.fractalqb.de/fractalqb/gomk v0.4.0/go.mod h1:6cT3Lmrf2l8jYrEmroA9b+Oxwr5f9dydLg7uN5JS+7o=
 git.fractalqb.de/fractalqb/nmconv v1.0.1/go.mod h1:gMsx/GoC/NtYT0LGv0kxCQF79LG7bI0QilIgLi7GD3o=
 git.fractalqb.de/fractalqb/pack v0.6.3 h1:kmeYQ1zLyRMX/yb0s5vLBUgdJZzfmRJT1F+WVMQR934=
 git.fractalqb.de/fractalqb/pack v0.6.3/go.mod h1:fi8fayCsI4YHjfGyh9aEcQVhLL6YNZt7Vb4XF9PZxts=

@@ -48,6 +48,15 @@
     <button @click="modal=''">Close</button>
   </Modal>
 </transition>
+<footer>
+  <span title="If you like Gamcro, I would be happy to receive your appreciation.">Buy me a coffee: </span>
+  <a href="https://flattr.com/@CmdrVasquess" target="_blank">
+    <img src="flattr-badge.png" alt="flattr" id="flattr"/>
+  </a> •
+  <a href="https://liberapay.com/CmdrVasquess/donate" target="_blank">
+    <img src="lp-badge.png" alt="LiberaPay" id="liberapay"/>
+  </a>
+</footer>
 </template>
 
 <script>
@@ -240,6 +249,10 @@ button:disabled {
     color: #A0BAD5;
     cursor: not-allowed;
 }
+a:any-link {
+    color: var(--colFgr);
+    text-decoration: none;
+}
 label::after { content: ':'; }
 label.before {
     font-weight: bold;
@@ -369,5 +382,21 @@ div.modal-box h1 {
 div.modal-box textarea {
     width: 60vw;
     height: 60vh;
+}
+footer {
+    position: fixed;
+    left: 0; bottom: 0; width: 100%;
+    background-color: #443820;
+    color: #BD910C;
+    text-align: left; padding: .1em 1em;
+    z-index: 1;
+}
+footer img {
+    height: .8em;
+    vertical-align: baseline;
+}
+footer #liberapay {
+    height: 1.1em;
+    vertical-align: baseline;
 }
 </style>
