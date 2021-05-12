@@ -29,6 +29,8 @@ var (
 const (
 	AppName    = "gamcro"
 	NewDirPerm = 0750
+
+	DefaultTextsDir = "texts"
 )
 
 type Gamcro struct {
@@ -41,6 +43,7 @@ type Gamcro struct {
 	ClientNet       string
 	TxtLimit        int
 	APIs            GamcroAPI
+	TextsDir        string
 }
 
 func (g *Gamcro) Run() error {

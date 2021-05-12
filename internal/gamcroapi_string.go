@@ -12,14 +12,16 @@ func _() {
 	_ = x[TapAPI-2]
 	_ = x[ClipPostAPI-4]
 	_ = x[ClipGetAPI-8]
-	_ = x[GamcroAPI_end-16]
+	_ = x[SaveTexts-16]
+	_ = x[GamcroAPI_end-32]
 }
 
 const (
 	_GamcroAPI_name_0 = "TypeAPITapAPI"
 	_GamcroAPI_name_1 = "ClipPostAPI"
 	_GamcroAPI_name_2 = "ClipGetAPI"
-	_GamcroAPI_name_3 = "GamcroAPI_end"
+	_GamcroAPI_name_3 = "SaveTexts"
+	_GamcroAPI_name_4 = "GamcroAPI_end"
 )
 
 var (
@@ -37,6 +39,8 @@ func (i GamcroAPI) String() string {
 		return _GamcroAPI_name_2
 	case i == 16:
 		return _GamcroAPI_name_3
+	case i == 32:
+		return _GamcroAPI_name_4
 	default:
 		return "GamcroAPI(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

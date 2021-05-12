@@ -5,7 +5,7 @@ go 1.16
 require (
 	fyne.io/fyne/v2 v2.0.3
 	git.fractalqb.de/fractalqb/c4hgol v0.10.4
-	git.fractalqb.de/fractalqb/gomk v0.4.0
+	git.fractalqb.de/fractalqb/gomk v0.4.1
 	git.fractalqb.de/fractalqb/pack v0.6.3
 	git.fractalqb.de/fractalqb/qbsllm v0.11.2
 	git.fractalqb.de/fractalqb/sllm v1.0.1 // indirect
@@ -28,7 +28,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	golang.org/x/image v0.0.0-20210504121937-7319ad40d33e // indirect
 	golang.org/x/net v0.0.0-20210505214959-0714010a04ed // indirect
-	golang.org/x/sys v0.0.0-20210507161434-a76c4d0a0096 // indirect
+	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

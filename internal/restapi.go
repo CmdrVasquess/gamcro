@@ -3,6 +3,8 @@ package internal
 import (
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -20,6 +22,7 @@ const (
 	TapAPI
 	ClipPostAPI
 	ClipGetAPI
+	SaveTexts
 
 	GamcroAPI_end
 )
@@ -74,6 +77,9 @@ func (g *Gamcro) apiRoutes(r *mux.Router) {
 		HeadersRegexp("Content-Type", "text/plain")
 	r.HandleFunc("/clip", g.auth(g.handleClipGet)).
 		Methods(http.MethodGet)
+	r.HandleFunc("/texts/{set}", g.auth(g.saveTexts)).
+		Methods(http.MethodPost).
+		HeadersRegexp("Content-Type", "application/json")
 }
 
 func (g *Gamcro) rqBodyRd(wr http.ResponseWriter, rq *http.Request) io.ReadCloser {
@@ -193,4 +199,40 @@ func (g *Gamcro) handleClipGet(wr http.ResponseWriter, rq *http.Request) {
 	log.Infoa("clip `text` from board", txt)
 	wr.Header().Set("Content-Type", "text/plain")
 	io.WriteString(wr, txt)
+}
+
+func (g *Gamcro) saveTexts(wr http.ResponseWriter, rq *http.Request) {
+	setName := mux.Vars(rq)["set"]
+	if dir, _ := filepath.Split(setName); dir != "" {
+		log.Errora("tried to save texts to `path`", setName)
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if _, err := os.Stat(g.TextsDir); os.IsNotExist(err) {
+		log.Infoa("create `texts dir`", g.TextsDir)
+		if err = os.MkdirAll(g.TextsDir, 0777); err != nil {
+			log.Errore(err)
+			http.Error(wr, "internal server error", http.StatusInternalServerError)
+			return
+		}
+	}
+	file := filepath.Join(g.TextsDir, setName+".json")
+	tmpf := file + "~"
+	log.Infoa("save to `texts file`", file)
+	txtwr, err := os.Create(tmpf)
+	if err != nil {
+		log.Errore(err)
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer txtwr.Close()
+	if _, err := io.Copy(txtwr, rq.Body); err != nil { // TODO limit size?
+		log.Errore(err)
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	txtwr.Close()
+	if err = os.Rename(tmpf, file); err != nil {
+		log.Errore(err)
+	}
 }

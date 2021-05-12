@@ -147,6 +147,7 @@ func startGamcro() {
 	gamcro.TLSCert = paths.LocalData("cert.pem")
 	gamcro.TLSKey = paths.LocalData("key.pem")
 	gamcro.APIs = apisTab.apis
+	gamcro.TextsDir = paths.LocalDataPath(internal.DefaultTextsDir)
 
 	connectTab.setHint(gamcro.ConnectHint())
 	mainBox.Remove(startBtn)

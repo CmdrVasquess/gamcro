@@ -5,8 +5,8 @@ git.fractalqb.de/fractalqb/c4hgol v0.10.4 h1:zomUzJTrazoAKsabEbL0qSLVSbPdF4hxEF1
 git.fractalqb.de/fractalqb/c4hgol v0.10.4/go.mod h1:WaEjUnHxxec4RshLTh6cbtbzTnaYYgsK01gjrkBmuoo=
 git.fractalqb.de/fractalqb/c4qblog v0.9.6 h1:+nd6UUmSTG0FSzvLIPu5coFTGbfgFJT13qrRXrpW1Jg=
 git.fractalqb.de/fractalqb/c4qblog v0.9.6/go.mod h1:6KAB44D/fZR2W+/saWzn0MV/Mt6Yd1rIGqsKtvx0RcU=
-git.fractalqb.de/fractalqb/gomk v0.4.0 h1:hBLWqcipxRrWGUvQLezwv5dO3ECRmd+sErM5LJ4Nalg=
-git.fractalqb.de/fractalqb/gomk v0.4.0/go.mod h1:6cT3Lmrf2l8jYrEmroA9b+Oxwr5f9dydLg7uN5JS+7o=
+git.fractalqb.de/fractalqb/gomk v0.4.1 h1:ZinqQ8nSmjoVTz/89MvNvbbVaagLvWSan18Gx36kodI=
+git.fractalqb.de/fractalqb/gomk v0.4.1/go.mod h1:6cT3Lmrf2l8jYrEmroA9b+Oxwr5f9dydLg7uN5JS+7o=
 git.fractalqb.de/fractalqb/nmconv v1.0.1/go.mod h1:gMsx/GoC/NtYT0LGv0kxCQF79LG7bI0QilIgLi7GD3o=
 git.fractalqb.de/fractalqb/pack v0.6.3 h1:kmeYQ1zLyRMX/yb0s5vLBUgdJZzfmRJT1F+WVMQR934=
 git.fractalqb.de/fractalqb/pack v0.6.3/go.mod h1:fi8fayCsI4YHjfGyh9aEcQVhLL6YNZt7Vb4XF9PZxts=
@@ -157,8 +157,8 @@ golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20210104204734-6f8348627aad/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210316164454-77fc1eacc6aa/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210423082822-04245dca01da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20210507161434-a76c4d0a0096 h1:5PbJGn5Sp3GEUjJ61aYbUP6RIo3Z3r2E4Tv9y2z8UHo=
-golang.org/x/sys v0.0.0-20210507161434-a76c4d0a0096/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20210510120138-977fb7262007 h1:gG67DSER+11cZvqIMb8S8bt0vZtiN6xWYARwirrOSfE=
+golang.org/x/sys v0.0.0-20210510120138-977fb7262007/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210503060354-a79de5458b56 h1:b8jxX3zqjpqb2LklXPzKSGJhzyxCOZSz8ncv8Nv+y7w=
 golang.org/x/term v0.0.0-20210503060354-a79de5458b56/go.mod h1:tfny5GFUkzUvx4ps4ajbZsCe5lw1metzhBm9T3x7oIY=

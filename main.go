@@ -21,7 +21,10 @@ import (
 
 var (
 	gamcro = internal.Gamcro{
-		APIs: internal.TypeAPI | internal.ClipPostAPI,
+		APIs: internal.TypeAPI |
+			internal.ClipPostAPI |
+			internal.ClipGetAPI |
+			internal.SaveTexts,
 	}
 
 	paths = ospath.NewApp(ospath.ExeDir(), internal.AppName)
@@ -74,6 +77,7 @@ func main() {
 		}
 	}
 	gamcro.APIs = internal.ParseRoboAPISet(*fApis)
+	gamcro.TextsDir = paths.LocalDataPath(internal.DefaultTextsDir)
 	log.Infof("Authenticate to realm \"Gamcro: %s\"", internal.CurrentRealmKey)
 	log.Fatale(gamcro.Run())
 }

@@ -26,8 +26,9 @@
 <transition name="menu">
   <aside v-if="menu" class="menu">
     <span style="display:inline-block;padding-bottom:.5em">v{{version}}</span>
-    <div @click="menu=false;modal='import'" class="button">↴ Import</div>
-    <div @click="menu=false;modal='export'" class="button">Export ↱</div>
+    <div @click="menu=false;modal='import'" class="button">↴ Import Texts</div>
+    <div @click="menu=false;modal='export'" class="button">Export Texts ↱</div>
+    <div @click="menu=false;modal='save'" class="button">🖫 Save Texts</div>
     <div v-if="!cfg.MultiClient" @click="menu=false;disconnect()" class="button"
          title="Allow to connect from anoter machine">Disconnect</div>
   </aside>
@@ -46,6 +47,17 @@
     <button @click="modal='';importText()"
             :disabled="!impValid">Import</button>
     <button @click="modal=''">Close</button>
+  </Modal>
+</transition>
+<transition name="fade">
+  <Modal id="save" v-if="modal=='save'">
+    <h1>Save texts in Gamcro</h1>
+    <div>
+      <label>As</label> <input type="text" v-model="saveName">
+    </div>
+    <button @click="modal='';saveTexts(saveName);saveName=''"
+            :disabled="saveName.length==0">Save</button>
+    <button @click="modal=''">Cancel</button>
   </Modal>
 </transition>
 <footer>
@@ -81,6 +93,7 @@ export default {
             msgseq: 0,
             modal: "",
             impTexts: "",
+            saveName: "",
             cfg: {
                 "Version": "?.?.?",
                 "APIs": [],
@@ -140,7 +153,13 @@ export default {
         getClip() {
             this.modal = 'remote-clip';
             fetch('/clip')
-                .then(resp => resp.text())
+                .then(resp => {
+                    if (resp.ok)
+                        return resp.text();
+                    console.log(resp.status, resp.statusText);
+                    this.status="An error occured while getting remote clipboard";
+                    return "";
+                })
                 .then(txt => {
                     if (txt.length==0) return;
                     this.msgseq++;
@@ -161,6 +180,19 @@ export default {
             } catch(x) {
                 console.log("import texts: ", x);
             }
+        },
+        saveTexts(name) {
+            let init = {
+                method: "POST",
+                headers: {'Content-Type': "application/json"},
+                body: this.exportText
+            };
+            fetch(new Request('/texts/'+name, init))
+                .then(resp => {
+                    if (!resp.ok) {
+                        this.status = resp.statusText;
+                    }
+                });
         },
         disconnect() {
             fetch("/client/release")
@@ -263,6 +295,7 @@ input {
     color: var(--colFgr);
     font-size: 105%;
     border: none;
+    border: 2px solid var(--colBkg);
     border-bottom: 2px solid var(--colBBkg);
     padding: .2em .5em;
     padding-bottom: .1em;
