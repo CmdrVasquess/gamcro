@@ -203,7 +203,7 @@ func (g *Gamcro) handleClipGet(wr http.ResponseWriter, rq *http.Request) {
 
 func (g *Gamcro) saveTexts(wr http.ResponseWriter, rq *http.Request) {
 	setName := mux.Vars(rq)["set"]
-	if dir, _ := filepath.Split(setName); dir != "" {
+	if dir, _ := filepath.Split(setName); dir != "" || len(setName) > 64 {
 		log.Errora("tried to save texts to `path`", setName)
 		http.Error(wr, "internal server error", http.StatusInternalServerError)
 		return

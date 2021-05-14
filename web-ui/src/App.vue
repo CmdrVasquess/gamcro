@@ -28,7 +28,8 @@
     <span style="display:inline-block;padding-bottom:.5em">v{{version}}</span>
     <div @click="menu=false;modal='import'" class="button">↴ Import Texts</div>
     <div @click="menu=false;modal='export'" class="button">Export Texts ↱</div>
-    <div @click="menu=false;modal='save'" class="button">🖫 Save Texts</div>
+    <div v-if="api('SaveTexts')"
+         @click="menu=false;modal='save'" class="button">🖫 Save Texts</div>
     <div v-if="!cfg.MultiClient" @click="menu=false;disconnect()" class="button"
          title="Allow to connect from anoter machine">Disconnect</div>
   </aside>
@@ -96,7 +97,7 @@ export default {
             saveName: "",
             cfg: {
                 "Version": "?.?.?",
-                "APIs": [],
+                "APIs": ["ClipGetAPI","SaveTexts"],
                 "MultiClient": false
             }
         }
@@ -367,7 +368,11 @@ aside > div.button:hover {
 }
 h1 { margin: .5em 0; }
 img[src="logo.png"] { padding-right: .1em; }
-main { max-width: 60em; margin: auto; }
+main {
+    max-width: 60em;
+    margin: auto;
+    padding-bottom: 1.7em;
+}
 #top {
     display: flex;
     flex-flow: row wrap;

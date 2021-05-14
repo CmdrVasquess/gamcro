@@ -5,5 +5,5 @@ const (
 	Minor      = 6
 	Patch      = 2
 	Prerelease = `alpha`
-	BuildNo    = 131
+	BuildNo    = 134
 )

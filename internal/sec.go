@@ -8,7 +8,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -24,9 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/argon2"
+
 	"git.fractalqb.de/fractalqb/pack/ospath"
 	"github.com/gofrs/uuid"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 func init() {
@@ -127,9 +127,31 @@ func cryptWriteFile(name string, passwd, data []byte) error {
 }
 
 const (
-	cryptKeySaltSize = 32
-	cryptIOVersion   = 1
+	cryptIOVersion   = 2
+	cryptSaltSize    = 16
+	cryptKDFMem      = 64 * 1024
+	cryptKDFIter     = 3
+	cryptKDFParallel = 2
+	cryptKDFKeyLen   = 32
 )
+
+func mkKey(passwd, salt []byte) (key, nsalt []byte, err error) {
+	if salt == nil {
+		salt = make([]byte, cryptSaltSize)
+		if _, err = rand.Read(salt); err != nil {
+			return nil, nil, err
+		}
+	}
+	key = argon2.IDKey(
+		passwd,
+		salt,
+		cryptKDFIter,
+		cryptKDFMem,
+		cryptKDFParallel,
+		cryptKDFKeyLen,
+	)
+	return key, salt, nil
+}
 
 func cryptWrite(wr io.Writer, passwd, data []byte) error {
 	if len(passwd) == 0 {
@@ -139,11 +161,10 @@ func cryptWrite(wr io.Writer, passwd, data []byte) error {
 		_, err := wr.Write(data)
 		return err
 	}
-	salt := make([]byte, cryptKeySaltSize)
-	if _, err := rand.Read(salt); err != nil {
+	key, salt, err := mkKey([]byte(passwd), nil)
+	if err != nil {
 		return CryptError{"write", err}
 	}
-	key := pbkdf2.Key([]byte(passwd), salt, authIter, 32, sha256.New)
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return CryptError{"write", err}
@@ -214,10 +235,10 @@ func cryptRead(rd io.Reader, passwd []byte) ([]byte, error) {
 		}
 	}
 	salt.Reset()
-	if _, err := io.CopyN(&salt, rd, cryptKeySaltSize); err != nil {
+	if _, err := io.CopyN(&salt, rd, cryptSaltSize); err != nil {
 		return nil, CryptError{"read", err}
 	}
-	key := pbkdf2.Key([]byte(passwd), salt.Bytes(), authIter, 32, sha256.New)
+	key, _, _ := mkKey([]byte(passwd), salt.Bytes())
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, CryptError{"read", err}
@@ -332,14 +353,13 @@ const (
 )
 
 func (ac *AuthCreds) Set(user, passwd string) (err error) {
-	if ac.salt == nil {
-		ac.salt = make([]byte, 12)
-	}
-	if _, err = rand.Read(ac.salt); err != nil {
+	key, salt, err := mkKey([]byte(passwd), nil)
+	if err != nil {
 		return err
 	}
 	ac.user = user
-	ac.pass = pbkdf2.Key([]byte(passwd), ac.salt, authIter, authKeyLen, sha256.New)
+	ac.salt = salt
+	ac.pass = key
 	ac.ctpw = ""
 	return nil
 }
@@ -354,7 +374,7 @@ func (ac *AuthCreds) check(user, passwd string) bool {
 	if len(ac.salt) == 0 {
 		return string(ac.pass) == passwd
 	}
-	h := pbkdf2.Key([]byte(passwd), ac.salt, authIter, authKeyLen, sha256.New)
+	h, _, _ := mkKey([]byte(passwd), ac.salt)
 	res := subtle.ConstantTimeCompare(h, ac.pass) == 1
 	if res {
 		ac.ctpw = passwd
