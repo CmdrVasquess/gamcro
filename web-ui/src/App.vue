@@ -9,6 +9,12 @@
 <main>
   <div id="top">
     <QuickText :typeMsg="typeMsg" :clipMsg="clipMsg"/>
+    <select v-if="api('SaveTexts')"
+            id="load-txt" @click="listTexts" v-model="loadName"
+            title="Select saved text from Gamcro">
+      <option disabled>Load Text</option>
+      <option v-for="t in loadTexts" :key="t">{{t}}</option>
+    </select>
     <div>
       <button @click="addMsg()">New Text</button>
       <button v-if="api('ClipGetAPI')" title="New text from remote clipboard"
@@ -63,11 +69,12 @@
 </transition>
 <footer>
   <span title="If you like Gamcro, I would be happy to receive your appreciation.">Buy me a coffee: </span>
-  <a href="https://flattr.com/@CmdrVasquess" target="_blank">
-    <img src="flattr-badge.png" alt="flattr" id="flattr"/>
+  <a href="https://flattr.com/@CmdrVasquess" target="_blank" id="flattr">
+    <img src="flattr-badge.png" alt="flattr"/>
   </a> •
-  <a href="https://liberapay.com/CmdrVasquess/donate" target="_blank">
+  <a href="https://liberapay.com/CmdrVasquess/donate" target="_blank" id="liberapay">
     <img src="lp-badge.png" alt="LiberaPay" id="liberapay"/>
+    LiberaPay
   </a>
 </footer>
 </template>
@@ -95,6 +102,8 @@ export default {
             modal: "",
             impTexts: "",
             saveName: "",
+            loadTexts: [],
+            loadName: "Load Text",
             cfg: {
                 "Version": "?.?.?",
                 "APIs": ["ClipGetAPI","SaveTexts"],
@@ -195,6 +204,22 @@ export default {
                     }
                 });
         },
+        listTexts() {
+            console.log("list texts");
+            fetch("/texts")
+                .then(resp => resp.json())
+                .then(txts => {
+                    if (txts.length == 0) {
+                        this.status = "No loadable texts";
+                    } else {
+                        this.loadTexts = txts;
+                    }
+                })
+                .catch(x => {
+                    console.log(x)
+                    this.status = "No loadable texts";
+                });
+        },
         disconnect() {
             fetch("/client/release")
                 .then(resp => {
@@ -247,6 +272,23 @@ export default {
                 localStorage.msgs = JSON.stringify(this.msgs);
             },
             deep: true
+        },
+        loadName() {
+            console.log("load texts:", this.loadName);
+            if (this.loadName == "Load Text") return;
+            fetch("/texts/"+this.loadName)
+                .then(resp => resp.json())
+                .then(data => {
+                    this.msgs = [];
+                    for (let i in data) {
+                        console.log("Text:", data[i]);
+                        let msg = {key: i, text: data[i]};
+                        this.msgs.push(msg);
+                    }
+                    this.msgseq = this.msgs.length-1;
+                })
+                .catch(() => console.log("failed to load text"))
+                .finally(() => this.loadName = "Load Text");
         }
     }
 }
@@ -281,6 +323,27 @@ button:disabled {
     box-shadow: none;
     color: #A0BAD5;
     cursor: not-allowed;
+}
+select {
+    appearance: none;
+    background-image: linear-gradient(
+        var(--colBBkg),
+        var(--colBBkg) 75%,
+        var(--colBkg)
+    );
+    color: var(--colFgr);
+    font-weight: bold;
+    font-size: 102%;
+    border: 2px solid var(--colBBkg);
+    border-bottom: var(--colBkg);
+    border-radius: .3em .3em 0 0;
+    margin: .4em;
+    padding: .4em;
+}
+select:hover { color: #F7D87B; }
+select:focus {
+    border: 2px solid #A0BAD5;
+    border-bottom: var(--colBkg);
 }
 a:any-link {
     color: var(--colFgr);
@@ -392,6 +455,7 @@ main {
     margin: .5em 0;
     cursor: pointer;
 }
+#load-txt { min-width: 5em; }
 .message { margin-top: 1em; }
 .fade-enter-active,
 .fade-leave-active {
@@ -433,8 +497,11 @@ footer img {
     height: .8em;
     vertical-align: baseline;
 }
-footer #liberapay {
-    height: 1.1em;
-    vertical-align: baseline;
+#liberapay {
+    color: #BD910C;
+    font-size: 95%;
+}
+#liberapay img {
+    height: .95em;
 }
 </style>

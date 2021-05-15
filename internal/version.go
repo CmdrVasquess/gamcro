@@ -2,8 +2,8 @@ package internal
 
 const (
 	Major      = 0
-	Minor      = 6
-	Patch      = 2
+	Minor      = 7
+	Patch      = 0
 	Prerelease = `alpha`
-	BuildNo    = 134
+	BuildNo    = 136
 )

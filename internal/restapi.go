@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -77,7 +78,11 @@ func (g *Gamcro) apiRoutes(r *mux.Router) {
 		HeadersRegexp("Content-Type", "text/plain")
 	r.HandleFunc("/clip", g.auth(g.handleClipGet)).
 		Methods(http.MethodGet)
-	r.HandleFunc("/texts/{set}", g.auth(g.saveTexts)).
+	r.HandleFunc("/texts", g.auth(g.listTexts)).
+		Methods(http.MethodGet)
+	r.HandleFunc("/texts/{set}", g.auth(g.loadText)).
+		Methods(http.MethodGet)
+	r.HandleFunc("/texts/{set}", g.auth(g.saveText)).
 		Methods(http.MethodPost).
 		HeadersRegexp("Content-Type", "application/json")
 }
@@ -117,14 +122,21 @@ func validQuery(rq *http.Request, r validation.MapRule) (map[string][]string, er
 	return qry, err
 }
 
+func httpError(wr http.ResponseWriter, err error, sllm string, args ...interface{}) bool {
+	if err != nil {
+		log.Errora(sllm+": `error`", append(args, err))
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return true
+	}
+	return false
+}
+
 func (g *Gamcro) handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 	if !g.mayRobo(TypeAPI, wr) {
 		return
 	}
 	body, err := g.rqBody(wr, rq)
-	if err != nil {
-		log.Errora("Read body failed with `err`", err)
-		http.Error(wr, "internal server error", http.StatusInternalServerError)
+	if httpError(wr, err, "read body") {
 		return
 	}
 	if len(body) > 0 {
@@ -169,17 +181,14 @@ func (g *Gamcro) handleClipPost(wr http.ResponseWriter, rq *http.Request) {
 		return
 	}
 	body, err := g.rqBody(wr, rq)
-	if err != nil {
-		log.Errora("Read body failed with `err`", err)
-		http.Error(wr, "internal server error", http.StatusInternalServerError)
+	if httpError(wr, err, "read body") {
 		return
 	}
 	if len(body) > 0 {
 		txt := cleanText(string(body))
 		log.Infoa("clip `text` to board", txt)
-		if err = clipboard.WriteAll(txt); err != nil {
-			log.Errore(err)
-			http.Error(wr, "internal server error", http.StatusInternalServerError)
+		err = clipboard.WriteAll(txt)
+		if httpError(wr, err, "clip write") {
 			return
 		}
 	}
@@ -191,9 +200,7 @@ func (g *Gamcro) handleClipGet(wr http.ResponseWriter, rq *http.Request) {
 		return
 	}
 	txt, err := clipboard.ReadAll()
-	if err != nil {
-		log.Errore(err)
-		http.Error(wr, "internal server error", http.StatusInternalServerError)
+	if httpError(wr, err, "clip read") {
 		return
 	}
 	log.Infoa("clip `text` from board", txt)
@@ -201,7 +208,54 @@ func (g *Gamcro) handleClipGet(wr http.ResponseWriter, rq *http.Request) {
 	io.WriteString(wr, txt)
 }
 
-func (g *Gamcro) saveTexts(wr http.ResponseWriter, rq *http.Request) {
+func (g *Gamcro) listTexts(wr http.ResponseWriter, rq *http.Request) {
+	log.Debugs("list texts")
+	dir, err := os.Open(g.TextsDir)
+	if httpError(wr, err, "read `dir`", g.TextsDir) {
+		return
+	}
+	defer dir.Close()
+	entries, err := dir.ReadDir(0)
+	if err != nil {
+		log.Errore(err)
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	ls := []string{}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		n := e.Name()
+		if filepath.Ext(n) == ".json" {
+			n = n[:len(n)-5]
+			ls = append(ls, n)
+		}
+	}
+	enc := json.NewEncoder(wr)
+	wr.Header().Set("Content-Type", "application/json")
+	enc.Encode(ls)
+}
+
+func (g *Gamcro) loadText(wr http.ResponseWriter, rq *http.Request) {
+	setName := mux.Vars(rq)["set"]
+	log.Debuga("load `text`", setName)
+	if dir, _ := filepath.Split(setName); dir != "" || len(setName) > 64 {
+		log.Errora("tried to save texts to `path`", setName)
+		http.Error(wr, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	file := filepath.Join(g.TextsDir, setName+".json")
+	rd, err := os.Open(file)
+	if httpError(wr, err, "open `file`", file) {
+		return
+	}
+	defer rd.Close()
+	wr.Header().Set("Content-Type", "application/json")
+	io.Copy(wr, rd)
+}
+
+func (g *Gamcro) saveText(wr http.ResponseWriter, rq *http.Request) {
 	setName := mux.Vars(rq)["set"]
 	if dir, _ := filepath.Split(setName); dir != "" || len(setName) > 64 {
 		log.Errora("tried to save texts to `path`", setName)
