@@ -32,81 +32,25 @@ advise in mind:
 
 ## Using Gamcro
 
-Currently Gamcro comes as a terminal application. This is not fancy
-but it saves some memory and processor load on your gaming machine.
-(A GUI version is underway) So, be brave and fire up your machine's 
-command line interface. On Windows this might be the `cmd` tool or,
-more up-to-date the `powershell`. UN!X users are expected to know
-what they do.
-
-Let's say you put the Gamcro executable, `gamcro.exe` on Win or simply
-`gamcro` on Unices, into its own folder `gamcro-dir`. Gamcro will
-populate this folder with some supplementary files. After running
-Gamcro for the first time you will have something like:
-
-```
-…\gamcro-dir\
-   ├─ gamcro.exe
-   ├─ cert.pem
-   ├─ key.pem
-   └─ auth.txt
-```
-
-To run gamcro simply `cd` into the `gamcro-dir` and enter the following command
-
-```
-.\gamcro.exe
-```
-
-Then Gamcro starts and asks you for some input:
-
-1. A passphrase to make sure that the Web GUI has a secure connection to Gamcro
-2. Username and password the user of the Web GUI must enter to get access
-
-Passphrase and password are entered blindly, i.e. you—and no one else—will see
-what you type.
-
-```
-  ____                                
- / ___| __ _ _ __ ___   ___ _ __ ___  
-| |  _ / _` | '_ ` _ \ / __| '__/ _ \ 
-| |_| | (_| | | | | | | (__| | | (_) |
- \____|\__,_|_| |_| |_|\___|_|  \___/  v0.6.0 [alpha #113; go1.16.3]
-Enter passphrase (empty skips security): 
-May 05 20:22:44.861 INFO  [gamcro] Need user and password for HTTP basic auth
-Enter HTTP basic auth user: johndoe
-Enter HTTP basic auth password: 
-Repeat password: 
-Save user:password to 'auth.txt' (y/N)? y
-May 05 20:23:05.577 INFO  [gamcro] Use https://192.168.1.16:9420/ to connect your browser to the Web UI
-May 05 20:23:05.577 INFO  [gamcro] Authenticate to realm "Gamcro: 2R30A4"
-May 05 20:23:05.578 INFO  [gamcro] Create self signed `certificate:cert.pem` with `key:key.pem` as `common name:JV:Gamcro`
-```
-
-Note that Gamcro creates a self-signed X.509 certificate if it does
-not find neither the selected certificate file nor the selected key
-file. The defaults are `cert.pem` and `key.pem`. Once these files
-exists, they will be reused. Theses files are important to have an
-encrypted HTTPS connection. However, a self-signed certificate will
-not be accepted by web browsers by default – the browser has no reason
-to trust such a certificate. If you point your web browser to
-[`https://localhost:9420/`](https://localhost:9420/) you will get a
-warning about a potential security risk. The best you can do here, is
-to have a look a the certificate in your browser. The _common name_ of
-the self-signed certificate is “JV:Gamcro”. If that matches, its
-likely to be OK. To be sure you have to compare the fingerprints. If
-you think everything is OK then accept the certificate and
-continue. This will bring you to a minimalist web UI:
+Currently Gamcro comes as a GUI or as a terminal application that runs
+on the computer to which you want to send your input. After you have one
+of them running, you connect to it with a web browser form your
+tablet, smart phone or perhaps a second computer – just to find the
+following screen:
 
 ![Web UI](doc/gamcro-ui.png)
 
 It allows you to make your game machine _type_ something or to _clip_
-something to the clipboard.  This will be much more useful when you
-use a browser on another computer. To do that you have to find the IP
-address of your gaming machine, let's say `<my-ip-address>`. With this
-point your browser to `https://<my-ip-address>:9420/`
+something to the clipboard. To do that you can use the “Quick type” or
+“Quick clip” input fields when you want to send some ad hoc texts. E.g.
+some text you found in a gaming forum on your tablet.
 
-_to be continued…_
+If you have some texts you use regularly, e.g. to greet another player in
+an online game, you also can create text lists. Those lists can be exported
+and imported to share with other players. You can also save the lists on your 
+Gamcro machine to load them from any web browser that connects to Gamcro.
+
+Read more [details about installing and using Gamcro in the Wiki](https://github.com/CmdrVasquess/gamcro/wiki).
 
 ## Security
 
