@@ -44,6 +44,7 @@ type Gamcro struct {
 	TxtLimit        int
 	APIs            GamcroAPI
 	TextsDir        string
+	CORS            string
 }
 
 func (g *Gamcro) Run() error {

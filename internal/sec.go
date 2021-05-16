@@ -466,6 +466,7 @@ func (g *Gamcro) auth(h http.HandlerFunc) http.HandlerFunc {
 		}
 		user, pass, ok := rq.BasicAuth()
 		if !ok {
+			g.cors(wr)
 			wr.Header().Set("WWW-Authenticate", basicRealm)
 			http.Error(wr, "Unauthorized", http.StatusUnauthorized)
 			return

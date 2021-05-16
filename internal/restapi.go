@@ -131,6 +131,13 @@ func httpError(wr http.ResponseWriter, err error, sllm string, args ...interface
 	return false
 }
 
+func (g *Gamcro) cors(wr http.ResponseWriter) {
+	if g.CORS != "" {
+		wr.Header().Set("Access-Control-Allow-Origin", g.CORS)
+		wr.Header().Set("Access-Control-Allow-Credentials", "true")
+	}
+}
+
 func (g *Gamcro) handleKeyboardType(wr http.ResponseWriter, rq *http.Request) {
 	if !g.mayRobo(TypeAPI, wr) {
 		return
@@ -192,6 +199,7 @@ func (g *Gamcro) handleClipPost(wr http.ResponseWriter, rq *http.Request) {
 			return
 		}
 	}
+	g.cors(wr)
 	wr.WriteHeader(http.StatusNoContent)
 }
 

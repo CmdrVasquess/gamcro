@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"git.fractalqb.de/fractalqb/pack/ospath"
 	"github.com/CmdrVasquess/gamcro/internal"
@@ -118,7 +119,11 @@ func main() {
 		startBtn,
 	)
 
-	wapp = gapp.NewWindow("GamcroW")
+	wapp = gapp.NewWindow(fmt.Sprintf("GamcroW v%d.%d.%d",
+		internal.Major,
+		internal.Minor,
+		internal.Patch,
+	))
 	wapp.SetContent(mainBox)
 	wapp.ShowAndRun()
 }
@@ -159,5 +164,14 @@ func startGamcro() {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	enc.Encode(&gamcro)
-	go gamcro.Run()
+	go func() {
+		err := gamcro.Run()
+		log.Println(err)
+		info := dialog.NewInformation("Error", err.Error(), wapp)
+		info.SetOnClosed(func() {
+			gapp.Quit()
+		})
+		info.Show()
+		info.Refresh()
+	}()
 }

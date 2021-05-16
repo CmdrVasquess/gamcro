@@ -53,7 +53,8 @@ func main() {
 	flag.BoolVar(&gamcro.MultiClient, "multi-client", false, docMCltFlag)
 	flag.StringVar(&gamcro.ClientNet, "clients", "local", docClientsFlag)
 	fApis := flag.String("apis", gamcro.APIs.FlagString(), docAPIsFlag())
-	noPass := flag.Bool("no-passphrase", false, docNoPassFlags)
+	flag.StringVar(&gamcro.CORS, "cors", "", docCORSFlag)
+	noPass := flag.Bool("no-passphrase", false, docNoPassFlag)
 	fQR := flag.Bool("qr", false, docQRFlag)
 	fLog := flag.String("log", "", c4hgol.LevelCfgDoc(nil))
 	flag.Parse()
@@ -230,11 +231,15 @@ clients from the local network will be accepted.`
 
 	docQRFlag = `Show connect URL as QR code`
 
-	docNoPassFlags = `Skip the question to enter a passphrase. Note that this bypasses
+	docNoPassFlag = `Skip the question to enter a passphrase. Note that this bypasses
 the security for the generated X.509 priavte key. Using this option
 may be useful to avoid interactive input. But it is not recommended
 for normal use. Having a browser that accepts a certificate that can
 be used by any dubious program on your machine is a serious risk.`
+
+	docCORSFlag = `When not empty the value will be used for the HTTP 
+Access-Control-Allow-Origin header in HTTP responses. Also the
+Access-Control-Allow-Credentials header then is set true.`
 )
 
 func docAPIsFlag() string {

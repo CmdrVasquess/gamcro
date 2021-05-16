@@ -3,7 +3,7 @@ package internal
 const (
 	Major      = 0
 	Minor      = 7
-	Patch      = 0
+	Patch      = 1
 	Prerelease = `alpha`
-	BuildNo    = 136
+	BuildNo    = 139
 )
