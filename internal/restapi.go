@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -63,6 +64,8 @@ func (g *Gamcro) mayRobo(api GamcroAPI, wr http.ResponseWriter) bool {
 	if !res {
 		log.Warna("blocked `robo api`", api.String())
 		wr.WriteHeader(http.StatusForbidden)
+		wr.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(wr, "Inactive: %s", api.String())
 	}
 	return res
 }

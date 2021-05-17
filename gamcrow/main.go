@@ -167,11 +167,11 @@ func startGamcro() {
 	go func() {
 		err := gamcro.Run()
 		log.Println(err)
-		info := dialog.NewInformation("Error", err.Error(), wapp)
+		info := dialog.NewInformation("Error running Gamcro", err.Error(), wapp)
 		info.SetOnClosed(func() {
 			gapp.Quit()
 		})
+		wapp.Content().Refresh()
 		info.Show()
-		info.Refresh()
 	}()
 }

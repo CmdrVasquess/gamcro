@@ -15,6 +15,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+//go:generate versioner -bno build_no -pkg internal ../VERSION version.go
+
 var (
 	log    = qbsllm.New(qbsllm.Lnormal, AppName, nil, nil)
 	LogCfg = c4hgol.Config(

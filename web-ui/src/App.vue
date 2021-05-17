@@ -30,7 +30,7 @@
 <span class="menu" v-if="menu" @click="menu=false">✕</span>
 <span class="menu" v-else @click="menu=true">≡</span>
 <transition name="menu">
-  <aside v-if="menu" class="menu">
+  <aside v-if="menu" class="menu" @mouseleave="menu=false">
     <span style="display:inline-block;padding-bottom:.5em">v{{version}}</span>
     <div @click="menu=false;modal='import'" class="button">↴ Import Texts</div>
     <div @click="menu=false;modal='export'" class="button">Export Texts ↱</div>

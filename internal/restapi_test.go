@@ -1,6 +1,10 @@
 package internal
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -28,4 +32,32 @@ func TestValidKbdTapQuery(t *testing.T) {
 		"arg":   []string{"foo"},
 		"wrong": []string{"arg"},
 	})
+}
+
+func TestAPISwitches(t *testing.T) {
+	var gamcro Gamcro
+	var asTest = func(
+		h http.HandlerFunc,
+		method, path, body string,
+	) {
+		var brd io.Reader
+		if body != "" {
+			brd = strings.NewReader(body)
+		}
+		rq := httptest.NewRequest(method, path, brd)
+		rq.RemoteAddr = "[::1]:4711"
+		rrec := httptest.NewRecorder()
+		h(rrec, rq)
+		if rrec.Code != http.StatusForbidden {
+			t.Errorf("api call accepted: %s", rrec.Result().Status)
+		}
+		if b := rrec.Body.String(); !strings.HasPrefix(b, "Inactive: ") {
+			t.Errorf("Unxpected body: [%s]", b)
+		}
+	}
+
+	asTest(gamcro.handleKeyboardType, http.MethodPost, "/keyboard/type", "keyboard type")
+	asTest(gamcro.handleKeyboardTap, http.MethodPost, "/keyboard/tap/x", "")
+	asTest(gamcro.handleClipPost, http.MethodPost, "/clip", "clip post")
+	asTest(gamcro.handleClipGet, http.MethodGet, "/clip", "")
 }

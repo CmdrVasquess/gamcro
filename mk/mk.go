@@ -25,13 +25,19 @@ const (
 	tTest    target = "test"
 	tPredist target = "predist"
 	tDist    target = "dist"
+	tDeps    target = "deps"
 )
 
 var (
-	buildCmd = []string{"build", "-a", "--trimpath"}
-	tasks    = make(gomk.Tasks)
-	vDef     map[string]string
-	vStr     string
+	update   bool
+	buildCmd = []string{"build",
+		"-ldflags", "-s -w", // "strip" executable
+		"-a",         // clean build
+		"--trimpath", // relative source paths
+	}
+	tasks = make(gomk.Tasks)
+	vDef  map[string]string
+	vStr  string
 )
 
 func must(err error) {
@@ -54,9 +60,9 @@ func webAssetsFilter(dir string, info os.FileInfo) bool {
 
 func init() {
 	tasks.Def(tTools, func(dir *gomk.WDir) {
-		task.GetVersioner(dir.Build())
+		task.GetVersioner(dir.Build(), update)
 		err := task.MkGetTool(
-			dir.Build(),
+			dir.Build(), update,
 			"fyne",
 			"fyne.io/fyne/v2/cmd/fyne",
 		)
@@ -74,12 +80,13 @@ func init() {
 	})
 
 	tasks.Def(tBuild, func(dir *gomk.WDir) {
+		crowd := dir.Cd("gamcrow")
 		gomk.Exec(dir, "go", buildCmd...)
 		switch runtime.GOOS {
 		case "windows":
-			gomk.Exec(dir.Cd("gamcrow"), "fyne", "package", "-icon", "gamcrow.png")
+			gomk.Exec(crowd, "fyne", "package", "-icon", "gamcrow.png")
 		default:
-			gomk.Exec(dir.Cd("gamcrow"), "go", buildCmd...)
+			gomk.Exec(crowd, "go", buildCmd...)
 		}
 	}, tTools, tTest)
 
@@ -88,6 +95,10 @@ func init() {
 	})
 
 	tasks.Def(tPredist, nil, tWebUI, tGen, tBuild)
+
+	tasks.Def(tDeps, func(dir *gomk.WDir) {
+		task.DepsGraph(dir.Build(), update)
+	})
 
 	tasks.Def(tDist, func(dir *gomk.WDir) {
 		exes := []string{
@@ -102,6 +113,7 @@ func init() {
 		pack.CopyToDir(dir, "dist", nil, exes...)
 		for i, exe := range exes {
 			base := filepath.Base(exe)
+			gomk.Exec(distDir, "upx", base)
 			if filepath.Ext(exe) == ".exe" {
 				exes[i] = winDist(distDir, base)
 			} else {
@@ -111,7 +123,7 @@ func init() {
 		shaSumFile := fmt.Sprintf("gamcro-%s.sha256", vStr)
 		gomk.ExecFile(distDir, shaSumFile, "sha256sum", exes...)
 		for _, exe := range exes {
-			sigFile := fmt.Sprintf("%s-%s.asc", exe, vStr)
+			sigFile := exe + ".asc"
 			gomk.Exec(distDir, "gpg", "-b", "--armor",
 				"-u", "CmdrVasquess",
 				"-o", sigFile,
@@ -122,7 +134,7 @@ func init() {
 
 func winDist(dir *gomk.WDir, exe string) string {
 	base := exe[:len(exe)-4]
-	zip := base + ".zip"
+	zip := fmt.Sprintf("%s-%s-windows-amd64.zip", base, vStr)
 	gomk.Exec(dir, "zip", zip, exe)
 	must(os.Remove(dir.Join(exe)))
 	return zip
@@ -130,19 +142,23 @@ func winDist(dir *gomk.WDir, exe string) string {
 
 func linuxDist(dir *gomk.WDir, exe string) string {
 	const suffix = ".gz"
-	gzip := exe + suffix
-	gomk.Exec(dir, "gzip", "-S", suffix, exe)
+	gzip := fmt.Sprintf("%s-%s-%s-%s.tgz", exe, vStr, runtime.GOOS, runtime.GOARCH)
+	gomk.Exec(dir, "tar", "czf", gzip, exe)
+	os.Remove(dir.Join(exe))
 	return gzip
 }
 
 func usage() {
+	flag.PrintDefaults()
 	wr := flag.CommandLine.Output()
+	fmt.Fprintln(wr, "Tasks:")
 	tasks.Fprint(wr, "- ")
 }
 
 func main() {
 	flag.Usage = usage
 	fCDir := flag.String("C", "", "change working dir")
+	flag.BoolVar(&update, "update", update, "check for tool updates")
 	flag.Parse()
 	if *fCDir != "" {
 		must(os.Chdir(*fCDir))
