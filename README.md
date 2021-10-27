@@ -13,12 +13,11 @@ also be a serious security risk. Imagine that such a program is
 running while you are using your banking web portal and a bad guy
 manages to send remote input – what evil things he can do._
 
-Now, you have been warned and Gamcro comes with some security
-mechanisms. See section about Security. However, keep the following
+~~Now, you have been warned and Gamcro comes with some security
+mechanisms. See section about Security.~~ However, keep the following
 advise in mind:
 
-0. Don't use Gamcro while you have other browser windows or tabs open.
-   Currenty Gamcro has insufficient CSRF protection!  
+0. **Don't use Gamcro!** Currenty Gamcro has insufficient CSRF protection!  
 
 1. Enter a passphrase to make sure that the TLS certificate's private key
    file is encrypted.
